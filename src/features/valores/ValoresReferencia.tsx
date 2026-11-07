@@ -3,10 +3,11 @@ import { Link } from 'react-router-dom';
 import { useSesion } from '@/app/session';
 import { useQuery } from '@/data/DataProvider';
 import { REGIONES, RUBROS, region as regionDe } from '@/domain/catalogos';
+import { FiltroRubro } from '@/ui/rubros';
 import type { FuenteValor, RegionId, RubroId, TipoValor } from '@/domain/types';
 import { ajustar, estimarTotal, factorInflacion, tieneValor, valoresPara } from '@/domain/valores';
 import { fmt } from '@/i18n';
-import { Chip, Pill, Vacio, type TonoPill } from '@/ui/primitivas';
+import { Pill, Vacio, type TonoPill } from '@/ui/primitivas';
 import { RangoValor } from './RangoValor';
 
 const TIPOS: [TipoValor | '', string][] = [['', 'Todos'], ['hora', 'Por hora'], ['unidad', 'Por unidad'], ['proyecto', 'Por trabajo']];
@@ -78,10 +79,7 @@ export function ValoresReferencia() {
           <span>Llevar a pesos de {mes(data.mesesIso[data.mesesIso.length - 1])} por inflación</span>
         </label>}
       </div>
-      <div className="chips chips--filtro">
-        <Chip activo={!rub} onClick={() => setRub('')}>Todos los rubros</Chip>
-        {RUBROS.map((r) => <Chip key={r.id} activo={rub === r.id} onClick={() => setRub(r.id)}>{r.nombre}</Chip>)}
-      </div>
+      <FiltroRubro id="val-rubro" valor={rub || undefined} onCambio={(r) => setRub(r ?? '')} conDatos={data.valores.map((v) => v.rubro)} />
 
       <div className="valores">
         <div className="valores__lista">

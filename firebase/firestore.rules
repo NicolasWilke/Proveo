@@ -61,7 +61,9 @@ service cloud.firestore {
       return !(campo in d) || (d[campo] is string && d[campo].size() <= max);
     }
     function rubroValido(r) {
-      return r in ['packaging', 'frio', 'mantenimiento', 'etiquetas', 'quimicos', 'cargas', 'seguridad', 'limpieza'];
+      return r in [
+        'limpieza', 'seguridad', 'catering', 'cafeteria', 'plagas', 'residuos', 'eventos', 'mantenimiento', 'electricidad', 'climatizacion', 'incendio', 'obras', 'alquiler', 'cargas', 'frio', 'deposito', 'mensajeria', 'traslados', 'packaging', 'embalaje', 'etiquetas', 'quimicos', 'epp', 'oficina', 'ferreteria', 'combustibles', 'mobiliario', 'higiene', 'medicina', 'personal', 'capacitacion', 'it', 'software', 'telecom', 'contable', 'seguros', 'marketing'
+      ];
     }
     function sinCambios(campos) {
       return !request.resource.data.diff(resource.data).affectedKeys().hasAny(campos);

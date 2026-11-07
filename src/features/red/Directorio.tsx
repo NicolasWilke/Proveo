@@ -2,10 +2,11 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useSesion } from '@/app/session';
 import { useQuery } from '@/data/DataProvider';
-import { REGIONES, RUBROS, region, rubro } from '@/domain/catalogos';
+import { REGIONES, region, rubro } from '@/domain/catalogos';
+import { FiltroRubro } from '@/ui/rubros';
 import { COMPARAR_MAX, ordenar, promedioPonderado, reputacionVisible, type Orden } from '@/domain/directorio';
-import type { FiltroRed, Persona, Proveedor, RegionId, RubroId } from '@/domain/types';
-import { Chip, Seccion, Vacio } from '@/ui/primitivas';
+import type { FiltroRed, Persona, Proveedor, RegionId } from '@/domain/types';
+import { Seccion, Vacio } from '@/ui/primitivas';
 import { Insignias, Reputacion, TarjetaComprador, TarjetaProveedor } from './TarjetaProveedor';
 
 type Lista = 'todos' | 'favoritos' | 'cotizaron' | 'adjudique';
@@ -24,6 +25,8 @@ export function Directorio() {
   const [seleccion, setSeleccion] = useState<string[]>([]);
   const [comparando, setComparando] = useState(false);
   const { data } = useQuery<Persona[]>((r) => pestana === 'compradores' ? r.listarCompradores(filtro) : r.listarProveedores(filtro), [pestana, JSON.stringify(filtro)]);
+  // Sin filtros: solo para saber qué rubros tienen gente y mostrarlos como chips.
+  const { data: todos } = useQuery<Persona[]>((r) => pestana === 'compradores' ? r.listarCompradores({}) : r.listarProveedores({}), [pestana]);
   // Las listas propias del comprador: favoritos, quién le cotizó y a quién le adjudicó. Sin precios.
   const { data: mias } = useQuery(async (r) => {
     if (rol !== 'comprador') return null;
@@ -107,10 +110,7 @@ export function Directorio() {
           {(Object.keys(LISTAS) as Lista[]).map((l) => <button key={l} type="button" aria-pressed={lista === l} className={lista === l ? 'is-activo' : ''} onClick={() => setLista(l)}>{LISTAS[l]}</button>)}
         </div>
       )}
-      <div className="chips chips--filtro">
-        <Chip activo={!filtro.rubro} onClick={() => setFiltro({ ...filtro, rubro: undefined })}>Todos los rubros</Chip>
-        {RUBROS.map((r) => <Chip key={r.id} activo={filtro.rubro === r.id} onClick={() => setFiltro({ ...filtro, rubro: r.id as RubroId })}>{r.nombre}</Chip>)}
-      </div>
+      <FiltroRubro id="dir-rubro" valor={filtro.rubro} onCambio={(r) => setFiltro({ ...filtro, rubro: r })} conDatos={(todos ?? []).flatMap((p) => p.rubros)} />
       {data && resultados.length === 0 && <Vacio titulo="No hay resultados con esos filtros">Probá con otra región, otra calificación o con todos los rubros.</Vacio>}
       <div className="grilla-3">
         {resultados.map((p) => p.rol === 'comprador'

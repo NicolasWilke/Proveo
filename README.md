@@ -58,6 +58,8 @@ Para usar la red hay que registrarse. `/ingresar` tiene tres vistas: **Iniciar s
 
 Datos del alta: nombre de la empresa, nombre de contacto, email y teléfono de contacto, categoría (rubro), sector, ubicación, CUIT (con dígito verificador) y contraseña (mínimo 6 caracteres). `/perfil` muestra esos datos, permite editarlos y subir la foto o logo de la empresa (PNG, JPG o WebP; se achica antes de guardarlo). El rol y el CUIT no se cambian desde la app.
 
+**Rubros:** 37, en 7 grupos (servicios generales, mantenimiento e instalaciones, logística, insumos, personas y salud laboral, tecnología, servicios profesionales), definidos en `src/domain/catalogos.ts`. Para sumar uno: agregarlo ahí, en `RubroId` (`src/domain/types.ts`) y en `rubroValido` de `firebase/firestore.rules` (el test `catalogos.test.ts` falla si las dos listas no coinciden), y después volver a publicar las reglas. Los filtros muestran como chips solo los rubros con datos y el resto en un desplegable.
+
 **Quién ve los datos de contacto (mail y teléfono):**
 
 | Quien mira ↓ / de quién → | Comprador | Proveedor |

@@ -4,7 +4,8 @@ import { useAuth } from '@/auth/AuthProvider';
 import { prepararLogo } from '@/auth/imagen';
 import { FalloAuth, MENSAJES_FALLO, type CambiosPerfil, type ContactoCuenta } from '@/auth/tipos';
 import { REGION } from '@/config/region';
-import { REGIONES, RUBROS, region, rubro } from '@/domain/catalogos';
+import { REGIONES, region, rubro } from '@/domain/catalogos';
+import { OpcionesRubro } from '@/ui/rubros';
 import { DIAS_INVITACION, lugaresEquipo, PLANES } from '@/domain/planes';
 import type { Proveedor, RegionId, RubroId } from '@/domain/types';
 import { useQuery, useRepo } from '@/data/DataProvider';
@@ -307,7 +308,7 @@ function Edicion({ alTerminar }: { alTerminar: () => void }) {
         <div className="form__fila">
           <label className="campo" htmlFor="e-cat"><span>Categoría</span>
             <select id="e-cat" value={perfil.categoria} onChange={(e) => setP('categoria', e.target.value as RubroId)}>
-              {RUBROS.map((r) => <option key={r.id} value={r.id}>{r.nombre}</option>)}
+              <OpcionesRubro />
             </select>
           </label>
           <label className="campo" htmlFor="e-sector"><span>Sector</span><input id="e-sector" value={perfil.sector} onChange={(e) => setP('sector', e.target.value)} /></label>

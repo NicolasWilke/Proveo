@@ -1,11 +1,48 @@
 export type Rol = 'comprador' | 'proveedor';
-export type RubroId = 'packaging' | 'frio' | 'mantenimiento' | 'etiquetas' | 'quimicos' | 'cargas' | 'seguridad' | 'limpieza';
+export type RubroId =
+  | 'limpieza'
+  | 'seguridad'
+  | 'catering'
+  | 'cafeteria'
+  | 'plagas'
+  | 'residuos'
+  | 'eventos'
+  | 'mantenimiento'
+  | 'electricidad'
+  | 'climatizacion'
+  | 'incendio'
+  | 'obras'
+  | 'alquiler'
+  | 'cargas'
+  | 'frio'
+  | 'deposito'
+  | 'mensajeria'
+  | 'traslados'
+  | 'packaging'
+  | 'embalaje'
+  | 'etiquetas'
+  | 'quimicos'
+  | 'epp'
+  | 'oficina'
+  | 'ferreteria'
+  | 'combustibles'
+  | 'mobiliario'
+  | 'higiene'
+  | 'medicina'
+  | 'personal'
+  | 'capacitacion'
+  | 'it'
+  | 'software'
+  | 'telecom'
+  | 'contable'
+  | 'seguros'
+  | 'marketing';
 export type RegionId = 'ros' | 'amba' | 'cba' | 'noa' | 'costa';
 export type PlanId = 'gratis' | 'pro' | 'empresa';
 export type FrecuenciaAvisos = 'inmediato' | 'diario' | 'pausado';
 export type EstadoSolicitud = 'pendiente' | 'aceptada' | 'postergada' | 'rechazada';
 
-export interface Rubro { id: RubroId; nombre: string; unidad: string }
+export interface Rubro { id: RubroId; nombre: string; unidad: string; grupo: string }
 export interface Region { id: RegionId; nombre: string }
 
 export interface Verificaciones { idFiscal: boolean; mailCorporativo: boolean; cargoRevisado: boolean }
