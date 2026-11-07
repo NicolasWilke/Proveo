@@ -6,7 +6,7 @@ import { FalloAuth, MENSAJES_FALLO } from '@/auth/tipos';
 import { MARCA } from '@/config/marca';
 import { REGION } from '@/config/region';
 import { mailCorporativo, PASSWORD_MIN, validarAlta, type CampoAlta, type DatosAlta } from '@/domain/acceso';
-import { RUBROS } from '@/domain/catalogos';
+import { OpcionesRubro } from '@/ui/rubros';
 import { formatearCuit } from '@/domain/cuit';
 import type { Rol, RubroId } from '@/domain/types';
 import { esMailValido } from '@/domain/validaciones';
@@ -192,7 +192,7 @@ function Registro({ rolInicial, alCrear }: { rolInicial: Rol; alCrear: () => voi
               <label className="campo" htmlFor="r-cat"><span>{esComprador ? 'Qué comprás principalmente' : 'Qué vendés principalmente'}</span>
                 <select id="r-cat" value={d.categoria} onChange={(e) => set('categoria', e.target.value as RubroId)}>
                   <option value="" disabled>Elegí un rubro</option>
-                  {RUBROS.map((r) => <option key={r.id} value={r.id}>{r.nombre}</option>)}
+                  <OpcionesRubro />
                 </select>{err('categoria')}
               </label>
               <label className="campo" htmlFor="r-ubic"><span>Ciudad y provincia</span>

@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useSesion } from '@/app/session';
 import { useQuery, useRepo } from '@/data/DataProvider';
-import { CONDICIONES_PAGO, RUBROS, rubro } from '@/domain/catalogos';
+import { CONDICIONES_PAGO, rubro } from '@/domain/catalogos';
+import { OpcionesRubro } from '@/ui/rubros';
 import { DOCUMENTOS_SUGERIDOS, HORA_CIERRE, INVITADOS_MAX, ITEMS_MAX, cierreIso } from '@/domain/rfq';
 import { ajustar, estimarTotal, factorInflacion, tieneValor, valorDelRubro } from '@/domain/valores';
 import type { Comprador, Enlace, ItemPedido, Moneda, RubroId } from '@/domain/types';
@@ -145,7 +146,7 @@ export function NuevoPedido() {
           <div className="form__fila">
             <label className="campo" htmlFor="np-rubro">
               <span>Rubro</span>
-              <select id="np-rubro" value={r} onChange={(e) => cambiarRubro(e.target.value as RubroId)}>{RUBROS.map((x) => <option key={x.id} value={x.id}>{x.nombre}</option>)}</select>
+              <select id="np-rubro" value={r} onChange={(e) => cambiarRubro(e.target.value as RubroId)}><OpcionesRubro /></select>
             </label>
             <label className="campo" htmlFor="np-titulo"><span>Título</span><input id="np-titulo" maxLength={140} value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Ej.: Insumos de empaque para la línea 2" /></label>
           </div>

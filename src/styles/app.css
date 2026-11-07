@@ -126,7 +126,8 @@ a:hover { color: var(--sello-hover); }
 .avatar--proveedor { background: var(--superficie-2); color: var(--tinta); border: 1px solid var(--linea); }
 .avatar--grande { width: 56px; height: 56px; font-size: 1.15rem; border-radius: 10px; }
 .chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
-.chips--filtro { margin-block: 1rem 1.5rem; }
+.chips--filtro { margin-block: 1rem 1.5rem; align-items: center; }
+.filtro-rubro { width: auto; max-width: min(100%, 16rem); padding-block: 0.3rem; font-size: var(--t-s); }
 .chip { display: inline-flex; align-items: center; font-size: var(--t-xs); font-weight: 500; padding: 0.3rem 0.6rem; border-radius: 999px; background: var(--superficie-2); color: var(--tinta); border: 1px solid var(--linea); }
 .chip--boton { cursor: pointer; font-family: inherit; font-size: var(--t-s); padding: 0.4rem 0.75rem; }
 .chip--boton:hover { border-color: var(--sello); }

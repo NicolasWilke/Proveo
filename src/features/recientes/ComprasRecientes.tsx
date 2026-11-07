@@ -2,11 +2,12 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useSesion } from '@/app/session';
 import { useQuery, useRepo } from '@/data/DataProvider';
-import { RUBROS, rubro } from '@/domain/catalogos';
+import { rubro } from '@/domain/catalogos';
+import { FiltroRubro } from '@/ui/rubros';
 import { MENSAJE_VALOR_MAX, PLAZO_RESPUESTA_HABILES, VENTANA_DIAS, antiguedad, cantidadComparable, rangoCantidad, venceEn } from '@/domain/antecedentes';
 import type { Antecedente, Proveedor, RubroId, SolicitudValor } from '@/domain/types';
 import { fmt } from '@/i18n';
-import { Chip, Pill, Seccion, Vacio, type TonoPill } from '@/ui/primitivas';
+import { Pill, Seccion, Vacio, type TonoPill } from '@/ui/primitivas';
 import { useToast } from '@/ui/Toast';
 
 const SEMAFORO: Record<ReturnType<typeof antiguedad>['estado'], TonoPill> = { vigente: 'ok', 'por-vencer': 'senal', vencida: 'neutro' };
@@ -49,10 +50,7 @@ export function ComprasRecientes() {
           <input id="rec-buscar" type="search" placeholder="Producto, servicio o zona" value={texto} onChange={(e) => setTexto(e.target.value)} />
         </label>
       </div>
-      <div className="chips chips--filtro">
-        <Chip activo={!rub} onClick={() => setRub(undefined)}>Todos los rubros</Chip>
-        {RUBROS.map((r) => <Chip key={r.id} activo={rub === r.id} onClick={() => setRub(r.id)}>{r.nombre}</Chip>)}
-      </div>
+      <FiltroRubro id="rec-rubro" valor={rub} onCambio={setRub} conDatos={antecedentes.map((a) => a.rubro)} />
       {lista.length === 0 && <Vacio titulo="No hay compras recientes con esos filtros">Probá con todos los rubros o con otra palabra.</Vacio>}
       <div className="grilla-3">
         {lista.map((a) => <TarjetaAntecedente key={a.id} a={a} prov={prov(a.proveedorId)} pedida={mias.find((s) => s.antecedenteId === a.id && s.estado === 'pendiente')} />)}
