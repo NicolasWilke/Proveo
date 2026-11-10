@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { vistaDePagina } from './medicion';
 import { useRepo } from '@/data/DataProvider';
 import { MARCA } from '@/config/marca';
 import { REGION } from '@/config/region';
@@ -83,7 +84,7 @@ export function Layout() {
   const { modo: modoInstalar } = useInstalacion();
 
   const [menuAbierto, setMenuAbierto] = useState(false);
-  useEffect(() => { window.scrollTo(0, 0); setMenuAbierto(false); }, [pathname]);
+  useEffect(() => { window.scrollTo(0, 0); setMenuAbierto(false); vistaDePagina(pathname); }, [pathname]);
   useEffect(() => {
     if (!menuAbierto) return;
     const alTeclear = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenuAbierto(false); };
@@ -186,7 +187,7 @@ export function Layout() {
                 <img className="marca__logo" src={MARCA.logo} alt="" width={36} height={36} />
                 <img className="marca__nombre" src={MARCA.wordmark} alt={t.marca} width={109} height={26} />
               </NavLink>
-              <p>La red B2B de {REGION.pais} donde compradores y proveedores verificados piden, comparan y adjudican cotizaciones en un solo lugar.</p>
+              <p>La red B2B de {REGION.pais} donde compradores y proveedores con nombre y apellido piden, comparan y adjudican cotizaciones en un solo lugar.</p>
             </div>
             {columnasPie(rol).map((c) => (
               <nav key={c.titulo} className="pie__col" aria-label={c.titulo}>

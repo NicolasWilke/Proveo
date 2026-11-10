@@ -1,3 +1,4 @@
+import { evento } from '@/app/medicion';
 import { useState } from 'react';
 import { useQuery, useRepo } from '@/data/DataProvider';
 import { CONDICIONES_PAGO } from '@/domain/catalogos';
@@ -55,6 +56,7 @@ export function CotizarModal({ pedido, proveedorId, onCerrar }: { pedido: Pedido
         plazoDias: Number(plazo), vigencia, pago, nota: nota.trim(), adjuntos,
         ...(dolar ? { tipoCambio: dolar } : {}),
       });
+      evento('oferta_enviada', { rubro: pedido.rubro, moneda: pedido.moneda ?? 'ARS' });
       avisar(pedido.sobreCerrado
         ? `Oferta enviada y sellada. El comprador ve que cotizaste, pero tus precios recién al cierre (${fmt.fecha(pedido.cierre)} ${horaDeCierre(pedido.cierraEn)}).`
         : 'Oferta enviada. El comprador la ve en el comparador, en el mismo formato que las demás.');

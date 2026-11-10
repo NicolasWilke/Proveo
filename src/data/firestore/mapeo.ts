@@ -27,7 +27,8 @@ export function aPersona(id: string, d: Datos, e: Estado = {}): Persona {
     cargo: d.rol === 'comprador' ? 'Responsable de compras' : 'Responsable comercial',
     empresa: d.empresa, idFiscal: d.cuit, ciudad: d.ubicacion, region,
     rubros: (d.rubros?.length ? d.rubros : [d.categoria]) as RubroId[],
-    verificaciones: { idFiscal: true, mailCorporativo: false, cargoRevisado: false, ...e.verificaciones },
+    // Nada se da por verificado: lo marca el equipo de Proveo desde /admin (verificarCuenta).
+    verificaciones: { idFiscal: false, mailCorporativo: false, cargoRevisado: false, ...e.verificaciones },
     // El contacto nunca viaja con el perfil: se lee aparte y lo filtran las reglas (useContacto).
     contacto: { email: '', telefono: '' },
     logo: d.logoUrl ?? null,

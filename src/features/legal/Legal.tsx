@@ -71,6 +71,7 @@ export function Privacidad() {
         <li><strong>Netlify</strong>: publica el sitio.</li>
         <li><strong>Resend</strong>: envía los mails de aviso, para lo cual recibe tu mail y el texto del aviso.</li>
         <li><strong>GitHub</strong>: ejecuta la tarea programada que arma esos avisos.</li>
+        <li><strong>Google Analytics</strong>: mide qué páginas se visitan y pasos como registrarse o publicar un pedido, para saber dónde mejorar. No le mandamos tu nombre, mail, {REGION.idFiscal.nombre} ni empresa.</li>
         <li><strong>DolarApi</strong>: tu navegador le consulta el dólar oficial del día; no recibe datos de tu cuenta.</li>
       </ul>
 

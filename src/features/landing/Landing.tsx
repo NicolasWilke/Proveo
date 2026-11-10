@@ -37,7 +37,7 @@ export function Landing() {
           <div className="hero__txt">
             <p className="eyebrow">Red de compras corporativas · {REGION.pais}</p>
             <h1>El comprador corporativo tiene <em>nombre, apellido</em> y ganas de atender.</h1>
-            <p className="hero__bajada">Compradores verificados que publican qué necesitan y deciden quién les escribe. Proveedores que llegan a la persona que decide, en el momento en que está comprando.</p>
+            <p className="hero__bajada">Compradores con nombre y apellido que publican qué necesitan y deciden quién les escribe. Proveedores que llegan a la persona que decide, en el momento en que está comprando.</p>
             <div className="hero__cta">
               <Link className="btn btn--pri btn--grande" to="/ingresar?modo=registro&rol=comprador">Soy comprador · gratis</Link>
               <Link className="btn btn--sec btn--grande" to="/ingresar?modo=registro&rol=proveedor">Soy proveedor</Link>
@@ -75,7 +75,7 @@ export function Landing() {
           <h2>Proveedores confiables en días, sin que te llenen la bandeja</h2>
           <ul className="lista-check">
             <li>Publicás una necesidad una vez y recibís cotizaciones comparables, no 30 PDF distintos.</li>
-            <li>Ves {REGION.idFiscal.nombre} verificado, reseñas de otros compradores y certificaciones.</li>
+            <li>Ves qué datos de cada proveedor revisamos ({REGION.idFiscal.nombre}, mail, cargo), sus reseñas y certificaciones.</li>
             <li>Sabés si una cotización está cara en términos reales con el índice de precios por rubro.</li>
             <li>Solo te escribimos por lo tuyo: ofertas nuevas y cierres de tus pedidos.</li>
           </ul>
@@ -87,7 +87,7 @@ export function Landing() {
           <ul className="lista-check">
             <li>Compradores reales con nombre, empresa, rubros y ventana de compra abierta.</li>
             <li>Pedidos de cotización filtrados por tu rubro, zona y capacidad.</li>
-            <li>Reputación construida con reseñas de compradores verificados.</li>
+            <li>Reputación construida con reseñas de compradores que te contrataron.</li>
             <li>Tu embudo medido: vistas de compradores, solicitudes aceptadas, reuniones y cotizaciones ganadas.</li>
           </ul>
           <Link to="/planes" className="btn btn--sec">Ver planes para proveedores</Link>
