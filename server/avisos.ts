@@ -1,7 +1,8 @@
 // Avisos por mail de pedidos nuevos, leyendo y escribiendo en Firestore.
 //   npm run avisos                 avisa los pedidos nuevos (mail inmediato o cola del resumen diario) y manda las
 //                                  alertas por hito: ofertas nuevas, cierre en 24 h, cierre, consultas respondidas,
-//                                  adjudicación y pedidos de valor (ver server/alertas.ts)
+//                                  adjudicación y pedidos de valor (ver server/alertas.ts), y avisa al equipo los pedidos
+//                                  de plan pago (server/planes.ts)
 //   npm run avisos -- --resumen    manda los resúmenes diarios pendientes (correrlo a las 8:00)
 // En las dos, primero ejecuta las bajas de cuenta pedidas desde Mi perfil (server/bajas.ts).
 //
@@ -16,6 +17,7 @@ import { crearMailSender, fallas, MailMalConfigurado } from './mail/MailSender';
 import { auth, db } from './firebaseAdmin';
 import { mandarAlertas } from './alertas';
 import { procesarBajas } from './bajas';
+import { avisarPedidosDePlan } from './planes';
 
 const URL_PUBLICA = process.env.PUBLIC_URL ?? 'http://localhost:5173';
 const mail = crearMailSender();
@@ -104,6 +106,7 @@ try {
   else {
     await avisarNuevos();
     await mandarAlertas(mail, URL_PUBLICA);
+    await avisarPedidosDePlan(mail, URL_PUBLICA);
   }
 } catch (e) {
   // Con la clave mal se corta antes de marcar el pedido como avisado: se manda en la próxima corrida.

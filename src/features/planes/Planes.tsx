@@ -1,3 +1,4 @@
+import { evento } from '@/app/medicion';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/auth/AuthProvider';
@@ -40,6 +41,7 @@ export function Planes() {
     if (cuenta.miembro) { avisar(`El plan lo cambia el titular de la cuenta de ${cuenta.perfil.empresa}.`, 'info'); return; }
     if (!esProveedor) { avisar('Los planes pagos son para proveedores. Como comprador usás la red gratis.', 'info'); return; }
     const resultado = await repo.cambiarPlan(cuenta.uid, id);
+    evento('plan_pedido', { plan: id, anual });
     avisar(resultado === 'activo'
       ? `Plan ${PLANES[id].nombre} activo en ${cuenta.perfil.empresa}.`
       : `Recibimos tu pedido del plan ${PLANES[id].nombre}. Te escribimos para coordinar el pago y lo activamos.`, resultado === 'activo' ? 'ok' : 'info');
@@ -66,7 +68,7 @@ export function Planes() {
             <article key={id} className={`plan ${id === 'pro' ? 'plan--clave' : ''}`}>
               <header>
                 <h3>{p.nombre}</h3>
-                {id === 'pro' && <Pill tono="sello">El más elegido</Pill>}
+                {id === 'pro' && <Pill tono="sello">Recomendado</Pill>}
               </header>
               <p className="plan__precio"><span className="mono">{p.precioUsd ? fmt.usd(precioMensual(p, anual)) : 'USD 0'}</span><span className="tenue">/mes</span></p>
               <ul className="lista-check">{DETALLE[id].map((d) => <li key={d}>{d}</li>)}</ul>
@@ -81,7 +83,7 @@ export function Planes() {
         <article className="plan">
           <header><h3>Comprador</h3></header>
           <p className="plan__precio"><span className="mono">Gratis</span><span className="tenue"> para siempre</span></p>
-          <ul className="lista-check"><li>Perfil verificado</li><li>Pedidos de cotización ilimitados</li><li>Comparador e índice de precios</li><li>Reseñas de proveedores</li></ul>
+          <ul className="lista-check"><li>Verificación de perfil</li><li>Pedidos de cotización ilimitados</li><li>Comparador e índice de precios</li><li>Reseñas de proveedores</li></ul>
         </article>
         <article className="plan plan--proximo">
           <header><h3>Equipo de compras</h3><Pill tono="senal">Próximamente</Pill></header>

@@ -1,3 +1,4 @@
+import { evento } from '@/app/medicion';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useSesion } from '@/app/session';
@@ -110,12 +111,13 @@ export function NuevoPedido() {
         cierre: fecha, cierraEn: fecha ? cierreIso(fecha, hora) : '', privado, invitados: privado ? invitados : [], sobreCerrado,
         documentos, adjuntos, moneda,
       });
+      evento('pedido_publicado', { rubro: r, privado, items: its.length });
       const avisos = await repo.avisosDePedido(p.id);
       avisar(privado
         ? `Pedido ${p.id} publicado. Les avisamos a ${avisos.length} ${avisos.length === 1 ? 'proveedor invitado' : 'proveedores invitados'}.`
         : avisos.length
           ? `Pedido ${p.id} publicado. Les llega a ${avisos.length} ${avisos.length === 1 ? 'proveedor' : 'proveedores'} de ${rubro(r).nombre.toLowerCase()}.`
-          : `Pedido ${p.id} publicado. Todavía no hay proveedores verificados en ${rubro(r).nombre.toLowerCase()}; te avisamos cuando se sumen.`);
+          : `Pedido ${p.id} publicado. Todavía no hay proveedores de ${rubro(r).nombre.toLowerCase()}; te avisamos cuando se sumen.`);
       ir(`/cotizaciones/${p.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo publicar el pedido.');
@@ -209,7 +211,7 @@ export function NuevoPedido() {
           </summary>
         <Seccion titulo="4. Quiénes cotizan">
           <div className="opciones-fila" role="radiogroup" aria-label="Privacidad del pedido">
-            <label className="opcion"><input type="radio" name="privacidad" checked={!privado} onChange={() => setPrivado(false)} /><span><strong>Público</strong>Lo recibe y lo puede cotizar cualquier proveedor verificado de {rubro(r).nombre.toLowerCase()}.</span></label>
+            <label className="opcion"><input type="radio" name="privacidad" checked={!privado} onChange={() => setPrivado(false)} /><span><strong>Público</strong>Lo recibe y lo puede cotizar cualquier proveedor de {rubro(r).nombre.toLowerCase()}.</span></label>
             <label className="opcion"><input type="radio" name="privacidad" checked={privado} onChange={() => setPrivado(true)} /><span><strong>Privado</strong>Solo lo ven y lo cotizan los proveedores que invites.</span></label>
           </div>
           {privado && (

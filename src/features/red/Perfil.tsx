@@ -1,3 +1,4 @@
+import { insignias } from '@/domain/directorio';
 import { recibeOfertas } from '@/domain/rfq';
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
@@ -107,11 +108,11 @@ function PerfilProveedor({ p }: { p: Proveedor }) {
     <div className="envoltura pagina perfil">
       <div className="perfil__principal">
         <article className="vitrina">
-          <Sello className="vitrina__sello">Constancia<br />{REGION.autoridadFiscal}</Sello>
+          {p.verificaciones.idFiscal && <Sello className="vitrina__sello">Constancia<br />{REGION.autoridadFiscal}</Sello>}
           <div className="vitrina__cab">
             <Avatar p={p} grande />
             <div>
-              <p className="eyebrow">Proveedor verificado · desde {p.desde}</p>
+              <p className="eyebrow">{insignias(p).includes('verificado') ? 'Proveedor verificado' : 'Proveedor'} · en Proveo desde {p.desde}</p>
               <h1>{p.empresa}</h1>
               <p>{p.nombre} {p.apellido} · {p.cargo}</p>
               <p className="tenue mono">{REGION.idFiscal.nombre} {p.idFiscal} · {p.ciudad}{p.empleados && ` · ${p.empleados} empleados`}</p>
@@ -159,7 +160,7 @@ function PerfilProveedor({ p }: { p: Proveedor }) {
           </Seccion>
         )}
         {rol === 'proveedor' && !esYo && <p className="nota">Entre proveedores no se muestran datos de contacto.</p>}
-        <Seccion titulo="Reseñas de compradores verificados" extra={prom > 0 ? <span><Estrellas valor={prom} /> <span className="mono">{prom.toFixed(1)}</span></span> : undefined}>
+        <Seccion titulo="Reseñas de compradores" extra={prom > 0 ? <span><Estrellas valor={prom} /> <span className="mono">{prom.toFixed(1)}</span></span> : undefined}>
           {p.resenas.length === 0 && <p className="tenue">Todavía no tiene reseñas. Solo pueden reseñar compradores con una relación comercial registrada en la red.</p>}
           {p.resenas.length > 0 && (
             <dl className="subnotas">

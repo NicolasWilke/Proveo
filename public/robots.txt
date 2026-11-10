@@ -1,0 +1,11 @@
+# Las páginas internas piden sesión: solo se indexan las públicas.
+User-agent: *
+Allow: /
+Disallow: /panel
+Disallow: /perfil
+Disallow: /admin
+Disallow: /mails
+Disallow: /cotizaciones
+Disallow: /red
+
+Sitemap: https://proveosrl.netlify.app/sitemap.xml

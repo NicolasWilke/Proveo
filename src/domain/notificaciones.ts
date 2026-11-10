@@ -6,12 +6,13 @@ export const HORA_RESUMEN = '8:00';
 export type MailCompuesto = Pick<MailSaliente, 'asunto' | 'html' | 'texto'>;
 
 /**
- * Quiénes reciben un pedido nuevo. Público: proveedores con el rubro publicado, identidad fiscal
- * verificada y avisos no pausados. Privado: solo los invitados, aunque tengan los avisos pausados.
+ * Quiénes reciben un pedido nuevo. Público: proveedores con el rubro publicado y avisos no pausados
+ * (la revisión manual del equipo no es requisito: el CUIT ya se valida al registrarse).
+ * Privado: solo los invitados, aunque tengan los avisos pausados.
  */
 export function destinatariosDePedido(pedido: PedidoCotizacion, proveedores: Proveedor[]): Proveedor[] {
   if (pedido.privado) return proveedores.filter((p) => pedido.invitados.includes(p.id));
-  return proveedores.filter((p) => p.rubros.includes(pedido.rubro) && p.verificaciones.idFiscal && p.avisos !== 'pausado');
+  return proveedores.filter((p) => p.rubros.includes(pedido.rubro) && p.avisos !== 'pausado');
 }
 
 export function planDeAvisos(pedido: PedidoCotizacion, proveedores: Proveedor[]) {
@@ -84,4 +85,25 @@ export function mailResumenDiario(items: { pedido: PedidoCotizacion; comprador: 
   const texto = [`Hola ${prov.nombre}, este es tu resumen de las ${HORA_RESUMEN}.`, '',
     ...items.map(({ pedido, comprador }) => `- ${pedido.id} · ${pedido.titulo} (${quienCompra(comprador)}), cierra ${cierre(pedido)}: ${urlBase}/cotizaciones/${pedido.id}`)].join('\n');
   return { asunto, html: marco(cuerpo, pieComun(prov, urlBase)), texto };
+}
+
+/** Datos de un pedido de plan pago para el mail al equipo de Proveo. */
+export interface PedidoDePlan { empresa: string; contacto: string; email: string; cuit: string; plan: string; precioUsd: number }
+
+/** Mail interno: un proveedor pidió un plan pago y hay que coordinar el cobro y activarlo en /admin. */
+export function mailPedidoDePlan(p: PedidoDePlan, urlBase: string): MailCompuesto {
+  const asunto = `Pedido de plan ${p.plan}: ${p.empresa}`;
+  const filas: [string, string][] = [['Empresa', p.empresa], ['Contacto', p.contacto], ['Mail', p.email], ['CUIT', p.cuit], ['Plan', `${p.plan} · USD ${p.precioUsd}/mes`]];
+  const html = marco(`
+  <p style="margin:0 0 12px;font-weight:bold">Un proveedor quiere pagar. Escribile hoy para coordinar la transferencia.</p>
+  <table style="width:100%;border-collapse:collapse;font-size:14px;margin-bottom:16px">
+    ${filas.map(([k, v]) => `<tr><td style="padding:6px 0;color:#4F6280;width:120px">${k}</td><td style="padding:6px 0">${esc(v)}</td></tr>`).join('')}
+  </table>
+  <a href="${urlBase}/admin/cuentas" style="display:inline-block;background:#1565C0;color:#ffffff;text-decoration:none;font-weight:bold;padding:11px 18px;border-radius:6px">Activar el plan en Cuentas y planes</a>`,
+  'Aviso interno para el equipo de Proveo. Llega a las cuentas que figuran en la colección admins de Firestore.');
+  const texto = [
+    'Un proveedor quiere pagar. Escribile hoy para coordinar la transferencia.', '',
+    ...filas.map(([k, v]) => `${k}: ${v}`), '', `Activar el plan: ${urlBase}/admin/cuentas`,
+  ].join('\n');
+  return { asunto, html, texto };
 }

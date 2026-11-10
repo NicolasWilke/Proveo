@@ -55,7 +55,7 @@ export function Directorio() {
     <div className="envoltura pagina">
       <header className="pagina__cab">
         <p className="eyebrow">La red</p>
-        <h1>Personas con nombre y apellido, empresas verificadas</h1>
+        <h1>Personas con nombre y apellido, empresas con CUIT</h1>
       </header>
       <div className="pestanas" role="tablist">
         {(['proveedores', 'compradores'] as const).map((p) => (

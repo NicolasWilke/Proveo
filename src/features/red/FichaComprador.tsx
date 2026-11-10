@@ -14,13 +14,16 @@ export function FichaComprador({ c, nombreVisible = !c.semiAnonimo, accion, conS
 }) {
   const nombre = nombreVisible ? `${c.nombre} ${c.apellido}` : 'Nombre visible al aceptar';
   const abierta = ventanaAbierta(c);
+  const v = c.verificaciones;
+  // Solo se muestra lo que el equipo de Proveo revisó de verdad (ver verificarCuenta en /admin).
+  const revisado = v.idFiscal && v.mailCorporativo && v.cargoRevisado;
   return (
     <article className="ficha">
       <div className="ficha__tira mono">
         <span>Ficha de comprador</span>
         <span>{REGION.idFiscal.nombre} {c.verificaciones.idFiscal ? 'verificado' : 'sin verificar'}</span>
       </div>
-      {conSello && <Sello className="ficha__sello">Verificado<br />{REGION.autoridadFiscal}</Sello>}
+      {conSello && revisado && <Sello className="ficha__sello">Verificado<br />{REGION.autoridadFiscal}</Sello>}
       <div className="ficha__cab">
         <Avatar p={c} oculto={!nombreVisible} grande />
         <div className="ficha__id">
@@ -32,8 +35,8 @@ export function FichaComprador({ c, nombreVisible = !c.semiAnonimo, accion, conS
         </div>
       </div>
       <ul className="ficha__checks">
-        <li>{REGION.idFiscal.nombre} de la empresa validado en {REGION.autoridadFiscal}</li>
-        <li>Mail corporativo verificado</li>
+        {v.idFiscal ? <li>{REGION.idFiscal.nombre} de la empresa validado en {REGION.autoridadFiscal}</li> : <li className="tenue">{REGION.idFiscal.nombre} todavía sin revisar por Proveo</li>}
+        {v.mailCorporativo && <li>Mail corporativo verificado</li>}
       </ul>
       <div className="ficha__rubros">{c.rubros.map((r) => <Chip key={r}>{rubro(r).nombre}</Chip>)}</div>
       <div className={`ficha__ventana ${abierta ? 'is-abierta' : ''}`}>

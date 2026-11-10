@@ -1,3 +1,4 @@
+import { evento } from '@/app/medicion';
 import { useState } from 'react';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/auth/AuthProvider';
@@ -152,6 +153,7 @@ function Registro({ rolInicial, alCrear }: { rolInicial: Rol; alCrear: () => voi
     setEnviando(true);
     try {
       await auth.registrar({ ...d, categoria: d.categoria as RubroId, cuit: formatearCuit(d.cuit), empresa: d.empresa.trim(), contactoNombre: d.contactoNombre.trim(), sector: d.sector.trim(), ubicacion: d.ubicacion.trim() });
+      evento('sign_up', { rol: d.rol });
       alCrear();
     } catch (e) {
       setError(mensaje(e));
@@ -171,7 +173,7 @@ function Registro({ rolInicial, alCrear }: { rolInicial: Rol; alCrear: () => voi
       </div>
       <p className="tenue acceso__bajada">
         {esComprador
-          ? 'Registrá tu empresa para pedir cotizaciones a proveedores verificados de la red.'
+          ? 'Registrá tu empresa para pedir cotizaciones a proveedores de la red.'
           : 'Registrá tu empresa para recibir los pedidos de tu rubro y llegar a quien compra.'}
       </p>
       <ol className="pasos-alta" aria-label="Pasos del alta">
@@ -214,7 +216,7 @@ function Registro({ rolInicial, alCrear }: { rolInicial: Rol; alCrear: () => voi
             <div className="form__fila">
               <label className="campo" htmlFor="r-email"><span>Email</span>
                 <input id="r-email" type="email" autoComplete="email" placeholder="nombre@empresa.com.ar" value={d.email} onChange={(e) => set('email', e.target.value)} />
-                {err('email') ?? (esComprador && esMailValido(d.email) && !mailCorporativo(d.email, REGION) && <span className="tenue">Con el mail de la empresa tu perfil muestra “Mail corporativo verificado”.</span>)}
+                {err('email') ?? (esComprador && esMailValido(d.email) && !mailCorporativo(d.email, REGION) && <span className="tenue">Con el mail de la empresa podemos verificar tu perfil más rápido.</span>)}
               </label>
               <label className="campo" htmlFor="r-tel"><span>Teléfono</span>
                 <input id="r-tel" type="tel" autoComplete="tel" placeholder="Ej: +54 9 11 1234-5678" value={d.telefono} onChange={(e) => set('telefono', e.target.value)} />{err('telefono')}
