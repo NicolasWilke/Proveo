@@ -3,7 +3,9 @@ import { useSesion } from '@/app/session';
 import { useQuery } from '@/data/DataProvider';
 import { rubro } from '@/domain/catalogos';
 import { horaDeCierre, recibeOfertas } from '@/domain/rfq';
-import type { PedidoCotizacion, Persona } from '@/domain/types';
+import { ESTADOS_FILTRO, filtrarPedidos, hayFiltros, type EstadoFiltro, type FiltroPedidos } from '@/domain/pedidosProveedor';
+import type { PedidoCotizacion, Persona, RubroId } from '@/domain/types';
+import { FiltroRubro } from '@/ui/rubros';
 import { fmt, t } from '@/i18n';
 import { Pill, Vacio } from '@/ui/primitivas';
 import { historialCsv } from '@/domain/exportar';
@@ -13,8 +15,9 @@ export function Cotizaciones() {
   const { rol, usuarioId } = useSesion();
   const { data } = useQuery(async (r) => {
     const yo = (await r.obtenerPersona(usuarioId)) as Persona;
-    const pedidos = await r.listarPedidos(rol === 'comprador' ? { compradorId: usuarioId, visorId: usuarioId } : { rubros: yo.rubros, visorId: usuarioId });
-    // El proveedor necesita saber en cuáles ya cotizó; el comprador ve el contador del pedido.
+    const pedidos = await r.listarPedidos(rol === 'comprador' ? { compradorId: usuarioId, visorId: usuarioId } : { visorId: usuarioId });
+    // El proveedor ve todos los pedidos públicos de la red (de cualquier rubro) y sus invitaciones;
+    // filtrar por sus rubros es opcional. Necesita saber en cuáles ya cotizó; el comprador ve el contador del pedido.
     const mias = rol === 'proveedor' ? await Promise.all(pedidos.map((p) => r.cotizacionesDe(p.id))) : [];
     const compradores = await r.listarCompradores();
     // Para el historial: solo los adjudicados, que ya tienen los precios abiertos.
@@ -30,18 +33,33 @@ export function Cotizaciones() {
     };
   }, [rol, usuarioId]);
 
-  // El proveedor ve tres pestañas: lo que falta cotizar, lo que espera resultado y lo ya resuelto.
+  // Filtros del proveedor, en la URL para que sobrevivan al volver de un pedido. Sin filtros: todo.
   const [params, setParams] = useSearchParams();
-  const pestana = (params.get('ver') ?? 'cotizar') as Pestana;
-  const grupos = data && rol === 'proveedor' ? agrupar(data.pedidos) : null;
-  const visibles = grupos ? grupos[pestana] : data?.pedidos ?? [];
+  const filtro: FiltroPedidos = {
+    estado: (params.get('ver') ?? 'todos') as EstadoFiltro,
+    rubro: (params.get('rubro') || undefined) as RubroId | undefined,
+    soloMios: params.get('mios') === '1',
+    texto: params.get('q') ?? '',
+  };
+  const cambiar = (c: Partial<FiltroPedidos>) => {
+    const n = { ...filtro, ...c };
+    const q: Record<string, string> = {};
+    if (n.estado && n.estado !== 'todos') q.ver = n.estado;
+    if (n.rubro) q.rubro = n.rubro;
+    if (n.soloMios) q.mios = '1';
+    if (n.texto) q.q = n.texto;
+    setParams(q, { replace: true });
+  };
+  const esProv = rol === 'proveedor';
+  const res = data && esProv ? filtrarPedidos(data.pedidos, filtro, data.yo.rubros, usuarioId) : null;
+  const visibles = res ? res.visibles : data?.pedidos ?? [];
 
   return (
     <div className="envoltura pagina">
       <header className="pagina__cab pagina__cab--fila">
         <div>
           <p className="eyebrow">Pedidos de cotización</p>
-          <h1>{rol === 'comprador' ? 'Tus pedidos y las ofertas que recibiste' : 'Pedidos de tus rubros e invitaciones'}</h1>
+          <h1>{rol === 'comprador' ? 'Tus pedidos y las ofertas que recibiste' : 'Todos los pedidos de la red'}</h1>
         </div>
         {rol === 'comprador' && (
           <div className="acciones-fila">
@@ -54,26 +72,38 @@ export function Cotizaciones() {
           </div>
         )}
       </header>
-      {grupos && (
-        <div className="segmento pestanas" role="tablist" aria-label="Pedidos del proveedor">
-          {PESTANAS.map(([k, txt]) => (
-            <button key={k} type="button" role="tab" aria-selected={pestana === k} className={pestana === k ? 'is-activo' : ''} onClick={() => setParams(k === 'cotizar' ? {} : { ver: k }, { replace: true })}>
-              {txt} <span className="mono tenue">{grupos[k].length}</span>
-            </button>
-          ))}
+      {res && data!.pedidos.length > 0 && (
+        <div className="filtros-pedidos">
+          <div className="filtros">
+            <label className="campo campo--inline" htmlFor="ped-buscar">
+              <span>Buscar</span>
+              <input id="ped-buscar" type="search" placeholder="Título, zona o ítem" value={filtro.texto} onChange={(e) => cambiar({ texto: e.target.value })} />
+            </label>
+            <label className="opcion opcion--inline">
+              <input type="checkbox" checked={!!filtro.soloMios} onChange={(e) => cambiar({ soloMios: e.target.checked })} />
+              <span>Solo mis rubros e invitaciones</span>
+            </label>
+            {hayFiltros(filtro) && <button type="button" className="btn btn--ter btn--chico" onClick={() => setParams({}, { replace: true })}>Quitar filtros</button>}
+          </div>
+          <div className="segmento segmento--apilable" role="group" aria-label="Estado del pedido">
+            {ESTADOS_FILTRO.map(([k, txt]) => (
+              <button key={k} type="button" aria-pressed={filtro.estado === k} className={filtro.estado === k ? 'is-activo' : ''} onClick={() => cambiar({ estado: k })}>
+                {txt} <span className="mono tenue">{res.conteo[k]}</span>
+              </button>
+            ))}
+          </div>
+          <FiltroRubro id="ped-rubro" valor={filtro.rubro} onCambio={(r) => cambiar({ rubro: r })} conDatos={data!.pedidos.map((x) => x.p.rubro)} />
         </div>
       )}
-      {grupos && visibles.length === 0 && data!.pedidos.length > 0 && (
-        <Vacio titulo={pestana === 'cotizar' ? 'No te queda nada por cotizar' : pestana === 'cotizados' ? 'No tenés ofertas esperando resultado' : 'Todavía no hay resultados'}>
-          {pestana === 'cotizar' ? 'Te avisamos por mail cuando aparezca un pedido nuevo de tu rubro.' : pestana === 'cotizados' ? 'Cuando cotices, acá ves los pedidos hasta que el comprador adjudique.' : 'Acá aparecen los pedidos adjudicados en los que cotizaste, ganados o no.'}
-        </Vacio>
+      {res && visibles.length === 0 && data!.pedidos.length > 0 && (
+        <Vacio titulo="No hay pedidos con esos filtros">Probá con otro estado, otro rubro o quitá los filtros para ver todos.</Vacio>
       )}
       {data && data.pedidos.length === 0 && (
-        <Vacio titulo={rol === 'comprador' ? 'Todavía no publicaste pedidos' : 'No hay pedidos abiertos en tus rubros'}>
-          {rol === 'comprador' ? 'Publicá una necesidad y recibí ofertas comparables ítem por ítem.' : 'Te avisamos por mail cuando aparezcan o cuando un comprador te invite.'}
+        <Vacio titulo={rol === 'comprador' ? 'Todavía no publicaste pedidos' : 'Todavía no hay pedidos publicados en la red'}>
+          {rol === 'comprador' ? 'Publicá una necesidad y recibí ofertas comparables ítem por ítem.' : 'Te avisamos por mail cuando aparezca uno de tus rubros o cuando un comprador te invite.'}
         </Vacio>
       )}
-      {data && data.pedidos.length > 0 && (
+      {data && visibles.length > 0 && (
         <div className="tabla-envoltura">
           <table className="tabla">
             <thead>
@@ -90,18 +120,6 @@ export function Cotizaciones() {
       )}
     </div>
   );
-}
-
-type Pestana = 'cotizar' | 'cotizados' | 'resultados';
-const PESTANAS: [Pestana, string][] = [['cotizar', 'Para cotizar'], ['cotizados', 'Cotizados'], ['resultados', 'Resultados']];
-
-function agrupar<T extends { p: PedidoCotizacion; yaCotice: boolean }>(pedidos: T[]): Record<Pestana, T[]> {
-  const porCierre = (a: T, b: T) => a.p.cierraEn.localeCompare(b.p.cierraEn);
-  return {
-    cotizar: pedidos.filter((x) => recibeOfertas(x.p) && !x.yaCotice).sort(porCierre),
-    cotizados: pedidos.filter((x) => x.yaCotice && x.p.estado !== 'adjudicado').sort(porCierre),
-    resultados: pedidos.filter((x) => x.yaCotice && x.p.estado === 'adjudicado').sort((a, b) => -porCierre(a, b)),
-  };
 }
 
 function Fila({ p, rol, comprador, yaCotice, gane }: { p: PedidoCotizacion; rol: string; comprador: string; yaCotice: boolean; gane: boolean }) {
