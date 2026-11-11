@@ -152,6 +152,17 @@ Las variables se leen al compilar: después de cambiarlas, **Deploys → Trigger
 
 **Medición (opcional, recomendada):** creá una propiedad de Google Analytics 4 (analytics.google.com → Administrar → Crear propiedad → flujo web con la dirección del sitio), copiá el ID de medición (`G-…`) y cargalo en Netlify como `VITE_GA_ID`. Sin esa variable no se mide nada. Se miden las páginas vistas, `sign_up`, `pedido_publicado`, `oferta_enviada`, `plan_pedido` y los errores (`exception`); nunca mail, nombre, CUIT ni empresa (ver `src/app/medicion.ts`). En GA4, marcá esos cuatro eventos como eventos clave para ver el embudo.
 
+**Cobro con Mercado Pago (opcional):** los planes pagos se pueden cobrar con Mercado Pago Suscripciones sin integración por API. En Mercado Pago (cuenta de Proveo) → **Tu negocio → Suscripciones → Crear plan**, creá un plan por cada combinación (Pro mensual, Pro anual, Empresa mensual, Empresa anual) con el monto en pesos y la frecuencia, y copiá el link de cada uno a Netlify:
+
+```
+VITE_MP_LINK_PRO_MENSUAL
+VITE_MP_LINK_PRO_ANUAL
+VITE_MP_LINK_EMPRESA_MENSUAL
+VITE_MP_LINK_EMPRESA_ANUAL
+```
+
+Cuando un proveedor pide un plan pago en `/planes`, además del pedido de siempre ve el botón **Pagar con Mercado Pago** con el link de ese plan. Si falta la variable, no hay botón y queda solo la transferencia. Solo se aceptan links `https` de Mercado Pago (`src/domain/pagos.ts`). La activación sigue siendo manual: cuando el pago aparece en Mercado Pago, se activa el plan en `/admin`. Los montos están en pesos: cuando se ajusten los precios (trimestral), hay que actualizar el monto de cada plan en Mercado Pago. Con `VITE_GA_ID`, se mide `pago_mp_abierto`.
+
 **Vista previa al compartir:** `index.html` trae descripción e imagen (`public/og-proveo.png`) para WhatsApp, LinkedIn y buscadores, más `public/robots.txt` y `public/sitemap.xml`. Usan `https://proveosrl.netlify.app`: cuando haya dominio propio, cambiá esa dirección en los tres archivos.
 
 Para saber qué versión está publicada, mirá el pie de página: dice `Firebase · <id del proyecto>` o `modo demo`. Si dice `modo demo`, Netlify no está leyendo `VITE_AUTH=firebase`.
