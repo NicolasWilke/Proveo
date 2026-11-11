@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/auth/AuthProvider';
 import { useQuery, useRepo } from '@/data/DataProvider';
+import { linkMercadoPago, type LinksPago } from '@/domain/pagos';
 import { DESCUENTO_ANUAL, PLANES, precioMensual } from '@/domain/planes';
 import type { PlanId, Proveedor } from '@/domain/types';
 import { fmt } from '@/i18n';
@@ -22,6 +23,8 @@ export function Planes() {
   const repo = useRepo();
   const avisar = useToast();
   const [anual, setAnual] = useState(false);
+  // Último plan pago pedido en esta visita: se ofrece pagarlo con Mercado Pago si hay link cargado.
+  const [pedido, setPedido] = useState<{ plan: PlanId; anual: boolean; link: string } | null>(null);
   const esComprador = cuenta?.perfil.rol === 'comprador';
   const { data: enEspera } = useQuery((r) => (esComprador ? r.enListaEspera(cuenta.uid) : Promise.resolve(false)), [esComprador, cuenta?.uid]);
   const anotarse = async () => {
@@ -42,6 +45,9 @@ export function Planes() {
     if (!esProveedor) { avisar('Los planes pagos son para proveedores. Como comprador usás la red gratis.', 'info'); return; }
     const resultado = await repo.cambiarPlan(cuenta.uid, id);
     evento('plan_pedido', { plan: id, anual });
+    const link = resultado === 'solicitado' ? linkMercadoPago(id, anual, import.meta.env as LinksPago) : null;
+    setPedido(link ? { plan: id, anual, link } : null);
+    if (link) return;
     avisar(resultado === 'activo'
       ? `Plan ${PLANES[id].nombre} activo en ${cuenta.perfil.empresa}.`
       : `Recibimos tu pedido del plan ${PLANES[id].nombre}. Te escribimos para coordinar el pago y lo activamos.`, resultado === 'activo' ? 'ok' : 'info');
@@ -77,6 +83,15 @@ export function Planes() {
           );
         })}
       </div>
+      {pedido && (
+        <section className="pago" role="status" aria-live="polite">
+          <h3>Recibimos tu pedido del plan {PLANES[pedido.plan].nombre} {pedido.anual ? 'anual' : 'mensual'}</h3>
+          <p>Podés pagarlo ahora con Mercado Pago, con tarjeta o dinero en cuenta. El cobro se renueva solo y lo podés cancelar cuando quieras desde Mercado Pago.</p>
+          <p className="tenue">Activamos el plan apenas vemos el pago, en general el mismo día hábil. Si preferís transferencia, no hagas nada: te escribimos para coordinarla.</p>
+          <a className="btn btn--pri" href={pedido.link} target="_blank" rel="noopener noreferrer"
+            onClick={() => evento('pago_mp_abierto', { plan: pedido.plan, anual: pedido.anual })}>Pagar con Mercado Pago</a>
+        </section>
+      )}
 
       <h2 className="sub">Compradores</h2>
       <div className="planes planes--dos">

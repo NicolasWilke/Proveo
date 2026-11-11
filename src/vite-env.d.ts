@@ -14,5 +14,10 @@ interface ImportMetaEnv {
   readonly VITE_FIREBASE_EMULADORES?: string;
   /** Google Analytics 4 (G-…). Sin esto no se mide nada. */
   readonly VITE_GA_ID?: string;
+  /** Links de Mercado Pago Suscripciones por plan y frecuencia (ver src/domain/pagos.ts). Sin link, solo transferencia. */
+  readonly VITE_MP_LINK_PRO_MENSUAL?: string;
+  readonly VITE_MP_LINK_PRO_ANUAL?: string;
+  readonly VITE_MP_LINK_EMPRESA_MENSUAL?: string;
+  readonly VITE_MP_LINK_EMPRESA_ANUAL?: string;
 }
 interface ImportMeta { readonly env: ImportMetaEnv }
