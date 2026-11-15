@@ -5,6 +5,7 @@ import { region, rubro } from '@/domain/catalogos';
 import type { Comprador } from '@/domain/types';
 import { fmt } from '@/i18n';
 import { Avatar, Chip, Pill, Sello } from '@/ui/primitivas';
+import { MARCA } from '@/config/marca';
 
 export const ventanaAbierta = (c: Comprador) => !!c.ventanaHasta && fmt.diasHasta(c.ventanaHasta) >= 0;
 
@@ -15,7 +16,7 @@ export function FichaComprador({ c, nombreVisible = !c.semiAnonimo, accion, conS
   const nombre = nombreVisible ? `${c.nombre} ${c.apellido}` : 'Nombre visible al aceptar';
   const abierta = ventanaAbierta(c);
   const v = c.verificaciones;
-  // Solo se muestra lo que el equipo de Proveo revisó de verdad (ver verificarCuenta en /admin).
+  // Solo se muestra lo que el equipo de Pliego revisó de verdad (ver verificarCuenta en /admin).
   const revisado = v.idFiscal && v.mailCorporativo && v.cargoRevisado;
   return (
     <article className="ficha">
@@ -35,7 +36,7 @@ export function FichaComprador({ c, nombreVisible = !c.semiAnonimo, accion, conS
         </div>
       </div>
       <ul className="ficha__checks">
-        {v.idFiscal ? <li>{REGION.idFiscal.nombre} de la empresa validado en {REGION.autoridadFiscal}</li> : <li className="tenue">{REGION.idFiscal.nombre} todavía sin revisar por Proveo</li>}
+        {v.idFiscal ? <li>{REGION.idFiscal.nombre} de la empresa validado en {REGION.autoridadFiscal}</li> : <li className="tenue">{REGION.idFiscal.nombre} todavía sin revisar por {MARCA.nombre}</li>}
         {v.mailCorporativo && <li>Mail corporativo verificado</li>}
       </ul>
       <div className="ficha__rubros">{c.rubros.map((r) => <Chip key={r}>{rubro(r).nombre}</Chip>)}</div>

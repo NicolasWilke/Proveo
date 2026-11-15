@@ -10,6 +10,7 @@ import { fmt } from '@/i18n';
 import { Vacio } from '@/ui/primitivas';
 import { matrizCsv, nombreArchivo } from '@/domain/exportar';
 import { descargar } from '@/ui/descargar';
+import { MARCA } from '@/config/marca';
 
 const hoy = () => new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
@@ -151,7 +152,7 @@ export function ResumenEjecutivo() {
           })}
           {pedido.comentarioAdjudicacion && <div className="hoja__comentario"><p className="etq">Comentarios del comprador</p><p>{pedido.comentarioAdjudicacion}</p></div>}
         </section>
-        <footer className="hoja__pie">Generado con Proveo el {hoy()}. Los precios de proveedores no adjudicados son confidenciales: no compartas este reporte fuera de tu empresa.</footer>
+        <footer className="hoja__pie">Generado con {MARCA.nombre} el {hoy()}. Los precios de proveedores no adjudicados son confidenciales: no compartas este reporte fuera de tu empresa.</footer>
       </article>
     </div>
   );

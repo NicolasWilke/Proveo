@@ -40,7 +40,8 @@ a:hover { color: var(--sello-hover); }
 .marca:hover { color: var(--tinta); }
 .marca__logo { width: 40px; height: 40px; object-fit: contain; flex: none; }
 .marca__txt { display: flex; flex-direction: column; gap: 3px; width: 109px; }
-.marca__nombre { display: block; width: 109px; height: auto; }
+/* Nombre en texto hasta que haya wordmark de Pliego; con tipografía de marca, se vuelve a una imagen o SVG. */
+.marca__nombre { display: block; width: 109px; font: 700 26px/26px var(--f-display); letter-spacing: -0.01em; color: var(--tinta); }
 .marca__lema { display: block; overflow: visible; fill: var(--tenue); font: 500 8.5px var(--f-texto); }
 .nav { display: flex; gap: 0.25rem; flex: 1; overflow-x: auto; scrollbar-width: none; }
 .nav__link { padding: 0.5rem 0.7rem; border-radius: var(--r-s); color: var(--tenue); text-decoration: none; font-weight: 500; font-size: var(--t-s); white-space: nowrap; }

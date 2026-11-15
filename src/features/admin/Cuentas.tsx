@@ -6,6 +6,7 @@ import { PLANES } from '@/domain/planes';
 import type { CuentaAdmin, PlanId } from '@/domain/types';
 import { Pill, Seccion, Vacio } from '@/ui/primitivas';
 import { useToast } from '@/ui/Toast';
+import { MARCA } from '@/config/marca';
 
 const fechaCorta = (iso: string) => iso.split('-').reverse().join('/');
 const errorDe = (e: unknown) => (e instanceof Error ? e.message : 'No se pudo guardar.');
@@ -40,7 +41,7 @@ export function Cuentas() {
   if (!data.admin) {
     return (
       <div className="envoltura pagina">
-        <Vacio titulo="Solo para el equipo de Proveo" accion={{ a: '/panel', texto: 'Volver al panel' }}>
+        <Vacio titulo={`Solo para el equipo de ${MARCA.nombre}`} accion={{ a: '/panel', texto: 'Volver al panel' }}>
           Para administrar cuentas, tu usuario tiene que figurar en la colección admins de Firestore.
         </Vacio>
       </div>

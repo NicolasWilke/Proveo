@@ -15,6 +15,7 @@ import { useToast } from '@/ui/Toast';
 import { FichaComprador } from './FichaComprador';
 import { PedirContacto } from './PedirContacto';
 import { Insignias, promedio } from './TarjetaProveedor';
+import { MARCA } from '@/config/marca';
 
 export function Perfil() {
   const { id = '' } = useParams();
@@ -112,7 +113,7 @@ function PerfilProveedor({ p }: { p: Proveedor }) {
           <div className="vitrina__cab">
             <Avatar p={p} grande />
             <div>
-              <p className="eyebrow">{insignias(p).includes('verificado') ? 'Proveedor verificado' : 'Proveedor'} · en Proveo desde {p.desde}</p>
+              <p className="eyebrow">{insignias(p).includes('verificado') ? 'Proveedor verificado' : 'Proveedor'} · en {MARCA.nombre} desde {p.desde}</p>
               <h1>{p.empresa}</h1>
               <p>{p.nombre} {p.apellido} · {p.cargo}</p>
               <p className="tenue mono">{REGION.idFiscal.nombre} {p.idFiscal} · {p.ciudad}{p.empleados && ` · ${p.empleados} empleados`}</p>

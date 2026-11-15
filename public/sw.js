@@ -1,4 +1,4 @@
-// Service worker de Proveo: hace la app instalable y le da un arranque rápido.
+// Service worker de Pliego: hace la app instalable y le da un arranque rápido.
 // - Páginas: primero la red; sin conexión, la última versión guardada de la app.
 // - /assets/*: llevan hash en el nombre, así que se guardan y se sirven desde caché.
 // - Firebase, Google y cualquier otro dominio: no se tocan (los datos siempre van en vivo).

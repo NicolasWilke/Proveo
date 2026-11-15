@@ -104,7 +104,7 @@ export function Layout() {
           <NavLink to="/" className="marca" aria-label={`${t.marca}, inicio`}>
             <img className="marca__logo" src={MARCA.logo} alt="" width={40} height={40} />
             <span className="marca__txt">
-              <img className="marca__nombre" src={MARCA.wordmark} alt={t.marca} width={109} height={26} />
+              <span className="marca__nombre">{t.marca}</span>
               {/* textLength estira cada renglón al ancho exacto de la palabra, con cualquier fuente. */}
               <svg className="marca__lema" viewBox="0 0 109 21" width={109} height={21} aria-hidden="true">
                 {MARCA.lemaRenglones.map((r, i) => <text key={r} x={0} y={8 + i * 11} textLength={109} lengthAdjust="spacing">{r}</text>)}
@@ -185,7 +185,7 @@ export function Layout() {
             <div className="pie__marca">
               <NavLink to="/" className="marca" aria-label={`${t.marca}, inicio`}>
                 <img className="marca__logo" src={MARCA.logo} alt="" width={36} height={36} />
-                <img className="marca__nombre" src={MARCA.wordmark} alt={t.marca} width={109} height={26} />
+                <span className="marca__nombre">{t.marca}</span>
               </NavLink>
               <p>La red B2B de {REGION.pais} donde compradores y proveedores con nombre y apellido piden, comparan y adjudican cotizaciones en un solo lugar.</p>
             </div>
