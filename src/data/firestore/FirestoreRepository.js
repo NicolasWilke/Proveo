@@ -1,0 +1,543 @@
+import { addDoc, collection, collectionGroup, deleteDoc, doc, getDoc, getDocs, increment, query, runTransaction, serverTimestamp, setDoc, Timestamp, updateDoc, where, writeBatch, } from 'firebase/firestore';
+import { firebase } from '@/firebase/app';
+import { planDeAvisos } from '@/domain/notificaciones';
+import { validarRespuestaPedido, validarSolicitud } from '@/domain/reglas';
+import { validarResena, validarValor } from '@/domain/resenas';
+import { textoBuscable } from '@/domain/directorio';
+import { combinarValores } from '@/domain/valores';
+import { DIAS_INVITACION, lugaresEquipo, mesCupo, PLANES } from '@/domain/planes';
+import { empresaDeSesion } from './sesionEmpresa';
+import { antecedentesDe, desdeVentana, validarRespuestaValor, validarSolicitudValor } from '@/domain/antecedentes';
+import { adjudicadosDe, preciosVisibles, validarAdjudicacion, validarCotizacion, validarPedido, validarPregunta, validarRespuestaConsulta } from '@/domain/rfq';
+import { aCotizacion, aPedido, aPersona, aResena, aSolicitud, fechaIso, hoyIso, inicioMes, ventanaAbierta } from './mapeo';
+import { valores as valoresBase } from '../valores-referencia';
+import { escalasBase, indicadoresBase } from '../indicadores-base';
+/** Firestore no acepta undefined: se quitan los campos opcionales vacíos, también dentro de listas. */
+const sinIndefinidos = (x) => JSON.parse(JSON.stringify(x));
+/**
+ * Todos los datos de la red en Firestore. Las reglas (firebase/firestore.rules) deciden quién lee y escribe;
+ * acá se repiten las validaciones de negocio para dar mensajes claros antes de llegar a ellas.
+ * Ver el modelo de colecciones al inicio de las reglas.
+ */
+function coincide(p, f) {
+    if (!f)
+        return true;
+    if (f.rubro && !p.rubros.includes(f.rubro))
+        return false;
+    // Un proveedor aparece en la región principal y en las que cubre (más de una con el plan Empresa).
+    if (f.region && p.region !== f.region && !(p.rol === 'proveedor' && (p.cobertura[f.region] ?? 0) > 0))
+        return false;
+    if (f.soloVentanaAbierta && p.rol === 'comprador' && !ventanaAbierta(p))
+        return false;
+    if (f.texto && !textoBuscable(p).includes(f.texto.toLowerCase()))
+        return false;
+    return true;
+}
+export class FirestoreRepository {
+    constructor() {
+        this.db = firebase().db;
+        this.auth = firebase().auth;
+        this.oyentes = new Set();
+    }
+    tocar(x) { this.oyentes.forEach((f) => f()); return x; }
+    /** La cuenta por la que actúa la sesión: la empresa, si es un miembro de su equipo. */
+    yo() {
+        const u = this.auth.currentUser;
+        if (!u)
+            throw new Error('Sin sesión');
+        return empresaDeSesion() ?? u.uid;
+    }
+    async estados() {
+        const snap = await getDocs(collection(this.db, 'estado'));
+        return new Map(snap.docs.map((d) => [d.id, d.data()]));
+    }
+    /** Reseñas agrupadas por proveedor, de la más nueva a la más vieja. */
+    async resenas(proveedorId) {
+        const ref = collection(this.db, 'resenas');
+        const snap = await getDocs(proveedorId ? query(ref, where('proveedorId', '==', proveedorId)) : ref);
+        const mapa = new Map();
+        for (const d of snap.docs) {
+            const lista = mapa.get(d.data().proveedorId) ?? [];
+            lista.push(aResena(d.id, d.data()));
+            mapa.set(d.data().proveedorId, lista);
+        }
+        for (const lista of mapa.values())
+            lista.sort((a, b) => b.fecha.localeCompare(a.fecha));
+        return mapa;
+    }
+    async personas(rol) {
+        const [snap, estados] = await Promise.all([getDocs(query(collection(this.db, 'users'), where('rol', '==', rol))), this.estados()]);
+        const personas = snap.docs.map((d) => aPersona(d.id, d.data(), estados.get(d.id)));
+        if (rol === 'proveedor') {
+            const porProveedor = await this.resenas();
+            for (const p of personas)
+                p.resenas = porProveedor.get(p.id) ?? [];
+        }
+        if (rol === 'comprador') {
+            // La "ventana de compra" de un comprador es el cierre de su pedido abierto más lejano.
+            const abiertos = await getDocs(query(collection(this.db, 'pedidos'), where('estado', '==', 'abierto'), where('privado', '==', false)));
+            const cierre = new Map();
+            for (const d of abiertos.docs) {
+                const p = d.data();
+                if (!cierre.has(p.compradorId) || cierre.get(p.compradorId) < p.cierre)
+                    cierre.set(p.compradorId, p.cierre);
+            }
+            for (const c of personas)
+                c.ventanaHasta = cierre.get(c.id) ?? null;
+        }
+        return personas;
+    }
+    async listarCompradores(f) { return (await this.personas('comprador')).filter((p) => coincide(p, f)); }
+    async listarProveedores(f) { return (await this.personas('proveedor')).filter((p) => coincide(p, f)); }
+    async obtenerPersona(id) {
+        const [d, e] = await Promise.all([getDoc(doc(this.db, 'users', id)), getDoc(doc(this.db, 'estado', id))]);
+        if (!d.exists())
+            return null;
+        const p = aPersona(d.id, d.data(), e.data());
+        if (p.rol === 'comprador') {
+            const abiertos = await getDocs(query(collection(this.db, 'pedidos'), where('compradorId', '==', id), where('estado', '==', 'abierto'), where('privado', '==', false)));
+            p.ventanaHasta = abiertos.docs.map((x) => x.data().cierre).sort().pop() ?? null;
+        }
+        else {
+            p.resenas = (await this.resenas(id)).get(id) ?? [];
+        }
+        return p;
+    }
+    /** El perfil ya está en users/{uid}: no hay nada que copiar. */
+    async sincronizarCuenta(_c) { }
+    // ── Solicitudes
+    async solicitudesRecibidas(compradorId) {
+        const snap = await getDocs(query(collection(this.db, 'solicitudes'), where('compradorId', '==', compradorId)));
+        return snap.docs.map((d) => aSolicitud(d.id, d.data())).sort((a, b) => b.creada.localeCompare(a.creada));
+    }
+    async solicitudesEnviadas(proveedorId) {
+        const snap = await getDocs(query(collection(this.db, 'solicitudes'), where('proveedorId', '==', proveedorId)));
+        return snap.docs.map((d) => aSolicitud(d.id, d.data())).sort((a, b) => b.creada.localeCompare(a.creada));
+    }
+    async enviarSolicitud(proveedorId, compradorId, motivo) {
+        const [prov, uso, enviadas] = await Promise.all([this.obtenerPersona(proveedorId), this.uso(proveedorId), this.solicitudesEnviadas(proveedorId)]);
+        validarSolicitud({
+            motivo, plan: prov.plan, uso, existentes: enviadas.filter((s) => s.compradorId === compradorId), compradorRecibe: true,
+        });
+        // La solicitud y el contador del mes van juntos: las reglas no dejan pasar el cupo del plan.
+        const ref = doc(collection(this.db, 'solicitudes'));
+        const lote = writeBatch(this.db);
+        lote.set(ref, { proveedorId, compradorId, motivo: motivo.trim(), estado: 'pendiente', creada: serverTimestamp() });
+        lote.set(doc(this.db, 'usos', proveedorId), await this.contadorConUnoMas(proveedorId, { ultimaSolicitud: ref.id }));
+        await lote.commit();
+        return this.tocar({ id: ref.id, proveedorId, compradorId, motivo: motivo.trim(), estado: 'pendiente', creada: hoyIso() });
+    }
+    async responderSolicitud(id, estado) {
+        await updateDoc(doc(this.db, 'solicitudes', id), { estado });
+        this.tocar(undefined);
+    }
+    // ── Pedidos y cotizaciones
+    // Las consultas tienen que poder probarse contra las reglas: por eso los pedidos ajenos se piden
+    // en dos tandas (públicos e invitaciones) y nunca la colección entera.
+    async listarPedidos(f) {
+        const base = collection(this.db, 'pedidos');
+        const uid = this.yo();
+        let docs;
+        if (f?.compradorId) {
+            const q = f.compradorId === uid ? query(base, where('compradorId', '==', uid)) : query(base, where('compradorId', '==', f.compradorId), where('privado', '==', false));
+            docs = (await getDocs(q)).docs;
+        }
+        else {
+            const [publicos, invitado] = await Promise.all([getDocs(query(base, where('privado', '==', false))), getDocs(query(base, where('invitados', 'array-contains', uid)))]);
+            const invitaciones = new Set(invitado.docs.map((d) => d.id));
+            docs = [...invitado.docs, ...publicos.docs.filter((d) => !invitaciones.has(d.id))];
+        }
+        return docs.map((d) => aPedido(d.id, d.data()))
+            .filter((p) => !f?.rubros || f.rubros.includes(p.rubro) || p.invitados.includes(uid))
+            .sort((a, b) => b.cierraEn.localeCompare(a.cierraEn));
+    }
+    async obtenerPedido(id) {
+        const d = await getDoc(doc(this.db, 'pedidos', id)).catch(() => null);
+        return d?.exists() ? aPedido(d.id, d.data()) : null;
+    }
+    async publicarPedido(nuevo) {
+        validarPedido(nuevo);
+        const id = `PC-${Date.now().toString(36).slice(-6).toUpperCase()}`;
+        const { cierraEn, ...resto } = nuevo;
+        await setDoc(doc(this.db, 'pedidos', id), {
+            ...resto, invitados: nuevo.privado ? nuevo.invitados : [], cierraEn: Timestamp.fromDate(new Date(cierraEn)),
+            ofertas: 0, estado: 'abierto', creado: serverTimestamp(), avisado: false,
+        });
+        return this.tocar({ ...nuevo, id, ofertas: 0, estado: 'abierto' });
+    }
+    async cotizacionesDe(pedidoId) {
+        const uid = this.yo();
+        const pedido = await this.obtenerPedido(pedidoId);
+        if (!pedido)
+            return [];
+        if (pedido.compradorId === uid) {
+            if (!preciosVisibles(pedido))
+                return [];
+            const snap = await getDocs(collection(this.db, 'pedidos', pedidoId, 'cotizaciones'));
+            return snap.docs.map((d) => aCotizacion(d.id, d.data(), pedido.items)).sort((a, b) => a.precioUnitario - b.precioUnitario);
+        }
+        const mia = await getDoc(doc(this.db, 'pedidos', pedidoId, 'cotizaciones', uid)).catch(() => null);
+        return mia?.exists() ? [aCotizacion(mia.id, mia.data(), pedido.items)] : [];
+    }
+    async cotizar(nueva) {
+        const [prov, pedido, uso, ya] = await Promise.all([
+            this.obtenerPersona(nueva.proveedorId), this.obtenerPedido(nueva.pedidoId), this.uso(nueva.proveedorId),
+            getDoc(doc(this.db, 'pedidos', nueva.pedidoId, 'cotizaciones', nueva.proveedorId)),
+        ]);
+        if (!pedido)
+            throw new Error('Pedido inexistente');
+        validarRespuestaPedido({ plan: prov.plan, uso, pedidoAbierto: pedido.estado === 'abierto', yaCotizo: ya.exists() });
+        validarCotizacion(pedido, nueva);
+        // La oferta y el contador del pedido van juntos: las reglas exigen las dos cosas a la vez.
+        const lote = writeBatch(this.db);
+        lote.set(doc(this.db, 'pedidos', nueva.pedidoId, 'cotizaciones', nueva.proveedorId), {
+            ...nueva, plazoDias: Math.round(nueva.plazoDias), nota: nueva.nota ?? '', creada: serverTimestamp(),
+        });
+        lote.update(doc(this.db, 'pedidos', nueva.pedidoId), { ofertas: increment(1) });
+        lote.set(doc(this.db, 'usos', nueva.proveedorId), await this.contadorConUnoMas(nueva.proveedorId, { ultimaOferta: nueva.pedidoId }));
+        await lote.commit();
+        return this.tocar({ ...nueva, id: nueva.proveedorId, creada: hoyIso() });
+    }
+    async adjudicar(pedidoId, asignacion, comentario, listar = true) {
+        const pedido = await this.obtenerPedido(pedidoId);
+        if (!pedido)
+            throw new Error('Pedido inexistente');
+        validarAdjudicacion(pedido, await this.cotizacionesDe(pedidoId), asignacion);
+        const adjudicados = adjudicadosDe(asignacion);
+        // El id de cada cotización es el uid del proveedor. La adjudicación y las compras recientes van en un lote:
+        // las reglas aceptan cada antecedente solo si el pedido queda adjudicado a ese proveedor.
+        const lote = writeBatch(this.db);
+        lote.update(doc(this.db, 'pedidos', pedidoId), {
+            estado: 'adjudicado', adjudicadaA: adjudicados[0], adjudicados, adjudicacion: asignacion, comentarioAdjudicacion: comentario.trim(),
+        });
+        if (listar) {
+            const sector = (await getDoc(doc(this.db, 'users', this.yo()))).data()?.sector ?? '';
+            for (const { id, adjudicado: _a, ...a } of antecedentesDe(pedido, asignacion, sector.slice(0, 60))) {
+                lote.set(doc(this.db, 'antecedentes', id), { ...a, adjudicado: serverTimestamp() });
+            }
+        }
+        await lote.commit();
+        this.tocar(undefined);
+    }
+    // ── Compras recientes (antecedentes/{pedido--ítem}) y pedidos de valor (solicitudesValor)
+    async antecedentes() {
+        const snap = await getDocs(query(collection(this.db, 'antecedentes'), where('adjudicado', '>=', Timestamp.fromDate(new Date(`${desdeVentana()}T00:00:00-03:00`)))));
+        return snap.docs.map((d) => {
+            const x = d.data();
+            return { id: d.id, pedidoId: x.pedidoId, itemId: x.itemId, rubro: x.rubro, nombre: x.nombre, descripcion: x.descripcion, cantidad: x.cantidad, unidad: x.unidad, zona: x.zona, sectorComprador: x.sectorComprador, proveedorId: x.proveedorId, adjudicado: fechaIso(x.adjudicado) };
+        }).sort((a, b) => b.adjudicado.localeCompare(a.adjudicado));
+    }
+    async solicitarValor(antecedenteId, compradorId, cantidad, mensaje) {
+        const d = await getDoc(doc(this.db, 'antecedentes', antecedenteId));
+        if (!d.exists())
+            throw new Error('Esa compra ya no está en la lista.');
+        const a = { ...d.data(), id: d.id, adjudicado: fechaIso(d.data().adjudicado) };
+        validarSolicitudValor(a, cantidad, mensaje);
+        const datos = {
+            antecedenteId, nombre: a.nombre, unidad: a.unidad, compradorId, proveedorId: a.proveedorId, cantidad, mensaje: mensaje.trim(),
+            estado: 'pendiente', precioUnitario: null, vigencia: null, nota: null, respondida: null,
+        };
+        const ref = await addDoc(collection(this.db, 'solicitudesValor'), { ...datos, creada: serverTimestamp() });
+        return this.tocar({ ...datos, id: ref.id, creada: hoyIso() });
+    }
+    async solicitudesValor(f) {
+        const campo = f.compradorId ? 'compradorId' : 'proveedorId';
+        const snap = await getDocs(query(collection(this.db, 'solicitudesValor'), where(campo, '==', f.compradorId ?? f.proveedorId)));
+        return snap.docs.map((d) => {
+            const x = d.data();
+            return { ...x, id: d.id, creada: fechaIso(x.creada), respondida: x.respondida ? fechaIso(x.respondida) : null };
+        }).sort((a, b) => b.creada.localeCompare(a.creada));
+    }
+    async responderValor(id, r) {
+        if (r)
+            validarRespuestaValor(r.precioUnitario, r.vigencia);
+        await updateDoc(doc(this.db, 'solicitudesValor', id), r
+            ? { estado: 'respondida', precioUnitario: r.precioUnitario, vigencia: r.vigencia, nota: r.nota.trim(), respondida: serverTimestamp() }
+            : { estado: 'declinada', respondida: serverTimestamp() });
+        this.tocar(undefined);
+    }
+    // ── Avisos por mail (los manda server/avisos.ts; acá solo se consultan)
+    // ── Consultas (pedidos/{id}/consultas) y favoritos (users/{comprador}/favoritos/{proveedor})
+    async consultasDe(pedidoId) {
+        const snap = await getDocs(collection(this.db, 'pedidos', pedidoId, 'consultas'));
+        return snap.docs.map((d) => {
+            const x = d.data();
+            return { id: d.id, pedidoId, pregunta: x.pregunta, respuesta: x.respuesta ?? null, creada: fechaIso(x.creada), respondida: x.respondida ? fechaIso(x.respondida) : null };
+        }).sort((a, b) => a.creada.localeCompare(b.creada));
+    }
+    async preguntar(pedidoId, pregunta) {
+        const pedido = await this.obtenerPedido(pedidoId);
+        if (!pedido)
+            throw new Error('Pedido inexistente');
+        validarPregunta(pedido, this.yo(), pregunta);
+        // Sin autor: las reglas exigen exactamente estos campos para que la consulta sea anónima.
+        const ref = await addDoc(collection(this.db, 'pedidos', pedidoId, 'consultas'), { pregunta: pregunta.trim(), respuesta: null, respondida: null, creada: serverTimestamp() });
+        return this.tocar({ id: ref.id, pedidoId, pregunta: pregunta.trim(), respuesta: null, creada: hoyIso(), respondida: null });
+    }
+    async responderConsulta(pedidoId, consultaId, respuesta) {
+        validarRespuestaConsulta(respuesta);
+        await updateDoc(doc(this.db, 'pedidos', pedidoId, 'consultas', consultaId), { respuesta: respuesta.trim(), respondida: serverTimestamp() });
+        this.tocar(undefined);
+    }
+    async favoritos(compradorId) {
+        const snap = await getDocs(collection(this.db, 'users', compradorId, 'favoritos'));
+        return snap.docs.map((d) => d.id);
+    }
+    async marcarFavorito(compradorId, proveedorId, favorito) {
+        const ref = doc(this.db, 'users', compradorId, 'favoritos', proveedorId);
+        await (favorito ? setDoc(ref, { desde: serverTimestamp() }) : deleteDoc(ref));
+        this.tocar(undefined);
+    }
+    async avisosDePedido(pedidoId) {
+        const snap = await getDocs(collection(this.db, 'pedidos', pedidoId, 'avisos')).catch(() => null);
+        if (snap && !snap.empty)
+            return snap.docs.map((d) => ({ proveedorId: d.id, empresa: d.data().empresa, via: d.data().via }));
+        // Todavía no corrió el envío: mostramos a quiénes les va a llegar.
+        const pedido = await this.obtenerPedido(pedidoId);
+        if (!pedido)
+            return [];
+        const { inmediatos, diarios } = planDeAvisos(pedido, await this.listarProveedores());
+        return [
+            ...inmediatos.map((p) => ({ proveedorId: p.id, empresa: p.empresa, via: 'mail' })),
+            ...diarios.map((p) => ({ proveedorId: p.id, empresa: p.empresa, via: 'resumen' })),
+        ];
+    }
+    async cambiarAvisos(proveedorId, frecuencia) {
+        await updateDoc(doc(this.db, 'users', proveedorId), { avisos: frecuencia, actualizado: serverTimestamp() });
+        this.tocar(undefined);
+    }
+    /** Los mails reales los registra el proveedor de mail (Resend), no la app. */
+    async bandejaSalida() { return []; }
+    async enviarResumenesAhora() { return 0; }
+    // ── Referencias
+    async valoresReferencia() {
+        const [snap, indice] = await Promise.all([getDocs(collection(this.db, 'valoresReferencia')), getDoc(doc(this.db, 'config', 'indice'))]);
+        // Lo cargado en Firestore pisa al valor del código con el mismo id, salvo que el código sea más nuevo; lo nuevo se suma.
+        const valores = combinarValores(valoresBase, snap.docs.map((d) => ({ ...d.data(), id: d.id })));
+        const i = indice.data() ?? {};
+        return { valores, mesesIso: (i.mesesIso ?? []), inflacion: (i.inflacion ?? []) };
+    }
+    async guardarValor(v) {
+        validarValor(v);
+        const { id, ...datos } = v;
+        // Firestore no acepta undefined: se omiten los campos opcionales vacíos.
+        const limpio = Object.fromEntries(Object.entries(datos).filter(([, x]) => x !== undefined));
+        await setDoc(doc(this.db, 'valoresReferencia', id), { ...limpio, actualizado: serverTimestamp(), actualizadoPor: this.auth.currentUser.uid });
+        this.tocar(undefined);
+    }
+    async indicadores() {
+        const [ind, esc] = await Promise.all([getDocs(collection(this.db, 'indicadores')), getDocs(collection(this.db, 'escalas'))]);
+        const pisar = (base, docs) => {
+            const guardados = new Map(docs.map((d) => [d.id, { ...d.data(), id: d.id }]));
+            return [...base.map((b) => guardados.get(b.id) ?? b), ...[...guardados.values()].filter((g) => !base.some((b) => b.id === g.id))];
+        };
+        return { indicadores: pisar(indicadoresBase, ind.docs), escalas: pisar(escalasBase, esc.docs) };
+    }
+    async guardarIndicador(i) {
+        const { id, ...datos } = i;
+        await setDoc(doc(this.db, 'indicadores', id), sinIndefinidos({ ...datos, actualizado: hoyIso() }));
+        this.tocar(undefined);
+    }
+    async guardarEscala(e) {
+        const { id, ...datos } = e;
+        await setDoc(doc(this.db, 'escalas', id), sinIndefinidos({ ...datos, actualizado: hoyIso() }));
+        this.tocar(undefined);
+    }
+    async esAdmin(uid) {
+        try {
+            return (await getDoc(doc(this.db, 'admins', uid))).exists();
+        }
+        catch {
+            return false;
+        }
+    }
+    // ── Administración de cuentas (las reglas lo permiten solo a quien figura en admins/{uid})
+    async cuentasAdmin() {
+        const [usuarios, estados, pedidos] = await Promise.all([
+            getDocs(collection(this.db, 'users')), this.estados(), getDocs(collection(this.db, 'solicitudesPlan')),
+        ]);
+        const pendientes = new Map(pedidos.docs.map((d) => [d.id, { plan: d.data().plan, fecha: fechaIso(d.data().pedido) }]));
+        const contactos = await Promise.all(usuarios.docs.map((u) => getDoc(doc(this.db, 'users', u.id, 'privado', 'contacto')).then((c) => c.data()?.email).catch(() => undefined)));
+        return usuarios.docs.map((u, i) => {
+            const d = u.data();
+            const e = estados.get(u.id) ?? {};
+            const v = e.verificaciones ?? {};
+            return {
+                id: u.id, rol: d.rol, empresa: d.empresa ?? '', contactoNombre: d.contactoNombre ?? '', cuit: d.cuit ?? '', email: contactos[i] ?? '',
+                plan: e.plan ?? 'gratis', verificado: !!(v.idFiscal && v.mailCorporativo && v.cargoRevisado), pedido: pendientes.get(u.id) ?? null,
+            };
+        }).sort((a, b) => Number(!!b.pedido) - Number(!!a.pedido) || a.empresa.localeCompare(b.empresa));
+    }
+    async activarPlan(uid, plan) {
+        const lote = writeBatch(this.db);
+        lote.set(doc(this.db, 'estado', uid), { plan, actualizado: serverTimestamp(), actualizadoPor: this.auth.currentUser.uid }, { merge: true });
+        lote.delete(doc(this.db, 'solicitudesPlan', uid));
+        await lote.commit();
+        this.tocar(undefined);
+    }
+    async descartarPedidoPlan(uid) {
+        await deleteDoc(doc(this.db, 'solicitudesPlan', uid));
+        this.tocar(undefined);
+    }
+    async verificarCuenta(uid, verificado) {
+        await setDoc(doc(this.db, 'estado', uid), {
+            verificaciones: { idFiscal: verificado, mailCorporativo: verificado, cargoRevisado: verificado },
+            actualizado: serverTimestamp(), actualizadoPor: this.auth.currentUser.uid,
+        }, { merge: true });
+        this.tocar(undefined);
+    }
+    // ── Reseñas: una por proveedor ganador. La del principal usa el id del pedido (formato anterior).
+    async resenasDePedido(pedidoId) {
+        const snap = await getDocs(query(collection(this.db, 'resenas'), where('pedidoId', '==', pedidoId)));
+        return snap.docs.map((d) => aResena(d.id, d.data()));
+    }
+    async resenar(pedidoId, proveedorId, datos) {
+        validarResena(datos);
+        const pedido = await this.obtenerPedido(pedidoId);
+        if (!pedido || pedido.estado !== 'adjudicado' || !pedido.adjudicados?.includes(proveedorId))
+            throw new Error('Solo se reseña a un proveedor que ganó el pedido.');
+        const yo = (await this.obtenerPersona(this.yo()));
+        const id = proveedorId === pedido.adjudicadaA ? pedidoId : `${pedidoId}--${proveedorId}`;
+        await setDoc(doc(this.db, 'resenas', id), {
+            pedidoId, proveedorId, compradorId: this.yo(),
+            entrega: datos.entrega, calidad: datos.calidad, facturacion: datos.facturacion, texto: datos.texto.trim(),
+            autor: yo ? `${yo.nombre} ${yo.apellido}`.trim() : 'Comprador', empresa: yo?.empresa ?? '',
+            creada: serverTimestamp(),
+        });
+        this.tocar(undefined);
+    }
+    async indicePrecios() {
+        const [snap, indice] = await Promise.all([getDocs(collection(this.db, 'indicePrecios')), getDoc(doc(this.db, 'config', 'indice'))]);
+        const i = indice.data() ?? {};
+        return { series: snap.docs.map((d) => d.data()), inflacion: (i.inflacion ?? []), meses: (i.meses ?? []) };
+    }
+    // ── Planes y uso
+    /**
+     * usos/{proveedor}: contador del mes (UTC) que las reglas usan para hacer cumplir el cupo del plan.
+     * Cada solicitud u oferta lo sube de a uno en el mismo lote y anota cuál fue, para que no se pueda inventar.
+     */
+    async contadorConUnoMas(proveedorId, cambio) {
+        const mes = mesCupo();
+        const previo = (await getDoc(doc(this.db, 'usos', proveedorId))).data();
+        const base = previo?.mes === mes ? previo : { ...previo, solicitudes: 0, respuestas: 0 };
+        return {
+            ...(previo?.ultimaSolicitud ? { ultimaSolicitud: previo.ultimaSolicitud } : {}),
+            ...(previo?.ultimaOferta ? { ultimaOferta: previo.ultimaOferta } : {}),
+            mes,
+            solicitudes: (base.solicitudes ?? 0) + ('ultimaSolicitud' in cambio ? 1 : 0),
+            respuestas: (base.respuestas ?? 0) + ('ultimaOferta' in cambio ? 1 : 0),
+            ...cambio,
+        };
+    }
+    async uso(proveedorId) {
+        const desde = inicioMes();
+        const [sol, cot, contador] = await Promise.all([
+            this.solicitudesEnviadas(proveedorId),
+            getDocs(query(collectionGroup(this.db, 'cotizaciones'), where('proveedorId', '==', proveedorId))),
+            getDoc(doc(this.db, 'usos', proveedorId)).then((d) => d.data()).catch(() => undefined),
+        ]);
+        // Lo que cuentan las reglas manda; lo contado a mano cubre lo enviado antes de que existiera el contador.
+        const delMes = contador?.mes === mesCupo() ? contador : undefined;
+        return {
+            solicitudesUsadas: Math.max(sol.filter((s) => s.creada >= desde).length, delMes?.solicitudes ?? 0),
+            respuestasUsadas: Math.max(cot.docs.filter((d) => fechaIso(d.data().creada) >= desde).length, delMes?.respuestas ?? 0),
+        };
+    }
+    // ── Equipo del plan Empresa (miembros/{uid}, equipos/{empresa}, invitaciones/{codigo})
+    async equipo(empresaId) {
+        const [m, i] = await Promise.all([
+            getDocs(query(collection(this.db, 'miembros'), where('empresaId', '==', empresaId))),
+            getDocs(query(collection(this.db, 'invitaciones'), where('empresaId', '==', empresaId))),
+        ]);
+        const vence = (creada) => new Date(new Date(`${creada}T12:00:00Z`).getTime() + DIAS_INVITACION * 86400000).toISOString().slice(0, 10);
+        return {
+            miembros: m.docs.map((d) => ({ uid: d.id, nombre: d.data().nombre, email: d.data().email, desde: fechaIso(d.data().desde) }))
+                .sort((a, b) => a.desde.localeCompare(b.desde)),
+            invitaciones: i.docs.map((d) => {
+                const creada = fechaIso(d.data().creada);
+                return { codigo: d.id, etiqueta: d.data().etiqueta ?? '', creada, vence: vence(creada) };
+            }).filter((x) => x.vence >= hoyIso()).sort((a, b) => a.creada.localeCompare(b.creada)),
+        };
+    }
+    async invitarAlEquipo(empresaId, etiqueta) {
+        const [yo, actual] = await Promise.all([this.obtenerPersona(empresaId), this.equipo(empresaId)]);
+        if (!yo || yo.rol !== 'proveedor' || yo.plan !== 'empresa')
+            throw new Error('El equipo es parte del plan Empresa.');
+        if (actual.miembros.length + actual.invitaciones.length >= lugaresEquipo(yo.plan))
+            throw new Error(`Tu equipo tiene lugar para ${lugaresEquipo(yo.plan)} personas además de vos. Quitá a alguien o cancelá un enlace sin usar.`);
+        // Código largo y al azar: es la llave para entrar, no se puede adivinar.
+        const azar = Array.from(crypto.getRandomValues(new Uint8Array(18)), (b) => b.toString(36).padStart(2, '0')).join('');
+        const codigo = `inv-${azar}`;
+        await setDoc(doc(this.db, 'invitaciones', codigo), { empresaId, empresa: yo.empresa, etiqueta: etiqueta.trim().slice(0, 80), creada: serverTimestamp() });
+        this.tocar(undefined);
+        return { codigo, etiqueta: etiqueta.trim(), creada: hoyIso(), vence: new Date(Date.now() + DIAS_INVITACION * 86400000).toISOString().slice(0, 10) };
+    }
+    async cancelarInvitacion(codigo) {
+        await deleteDoc(doc(this.db, 'invitaciones', codigo));
+        this.tocar(undefined);
+    }
+    async quitarDelEquipo(empresaId, uid) {
+        const ref = doc(this.db, 'equipos', empresaId);
+        const lista = ((await getDoc(ref)).data()?.miembros ?? []);
+        // El miembro sale de la lista y pierde su acceso en el mismo lote.
+        const lote = writeBatch(this.db);
+        lote.delete(doc(this.db, 'miembros', uid));
+        lote.set(ref, { miembros: lista.filter((x) => x !== uid), ultimoQuitado: uid });
+        await lote.commit();
+        this.tocar(undefined);
+    }
+    async cambiarRegiones(proveedorId, extra) {
+        const yo = await this.obtenerPersona(proveedorId);
+        if (!yo || yo.rol !== 'proveedor')
+            throw new Error('Solo un proveedor elige regiones.');
+        const lista = extra.filter((r, i) => r !== yo.region && extra.indexOf(r) === i);
+        if (lista.length + 1 > PLANES[yo.plan].regiones)
+            throw new Error('Tu plan muestra una sola región. Con el plan Empresa sumás varias.');
+        await updateDoc(doc(this.db, 'users', proveedorId), { regiones: lista, actualizado: serverTimestamp() });
+        this.tocar(undefined);
+    }
+    /** El plan pago lo activa el equipo al confirmar el cobro: acá queda pedido. */
+    async cambiarPlan(proveedorId, plan) {
+        await setDoc(doc(this.db, 'solicitudesPlan', proveedorId), { plan, pedido: serverTimestamp() });
+        this.tocar(undefined);
+        return 'solicitado';
+    }
+    async embudo(proveedorId) {
+        const [enviadas, ganadas] = await Promise.all([
+            this.solicitudesEnviadas(proveedorId),
+            getDocs(query(collection(this.db, 'pedidos'), where('adjudicados', 'array-contains', proveedorId))),
+        ]);
+        const aceptadas = enviadas.filter((s) => s.estado === 'aceptada');
+        const vistas = await getDoc(doc(this.db, 'users', proveedorId, 'metricas', 'vistas')).then((d) => d.data()?.total ?? 0).catch(() => 0);
+        return { vistas, solicitudes: enviadas.length, aceptadas: aceptadas.length, reuniones: aceptadas.filter((s) => s.reunion).length, ganadas: ganadas.size };
+    }
+    async registrarVista(proveedorId) {
+        const ref = doc(this.db, 'users', proveedorId, 'metricas', 'vistas');
+        // Las reglas exigen sumar exactamente uno: se lee y se escribe en una transacción.
+        await runTransaction(this.db, async (tx) => {
+            const d = await tx.get(ref);
+            tx.set(ref, { total: (d.data()?.total ?? 0) + 1 });
+        });
+    }
+    async marcarReunion(solicitudId, hubo) {
+        await updateDoc(doc(this.db, 'solicitudes', solicitudId), { reunion: hubo });
+        this.tocar(undefined);
+    }
+    async enListaEspera(compradorId) {
+        return (await getDoc(doc(this.db, 'listaEspera', compradorId))).exists();
+    }
+    async sumarseListaEspera(compradorId, empresa) {
+        await setDoc(doc(this.db, 'listaEspera', compradorId), { plan: 'equipo', empresa, anotado: serverTimestamp() });
+        this.tocar(undefined);
+    }
+    async listaEspera() {
+        const snap = await getDocs(collection(this.db, 'listaEspera'));
+        return snap.docs.map((d) => ({ uid: d.id, empresa: d.data().empresa, anotado: fechaIso(d.data().anotado) }))
+            .sort((a, b) => b.anotado.localeCompare(a.anotado));
+    }
+    async reiniciarDemo() { }
+    suscribir(fn) {
+        this.oyentes.add(fn);
+        return () => { this.oyentes.delete(fn); };
+    }
+}

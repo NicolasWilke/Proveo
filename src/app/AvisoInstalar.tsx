@@ -7,7 +7,7 @@ export function AvisoInstalar() {
   if (!modo || cerrado) return null;
   return (
     <aside className="instalar" aria-label="Instalar la app">
-      <img className="instalar__ico" src="/icono-192.png" alt="" width={44} height={44} />
+      <img className="instalar__ico" src="/icono-unisono-192.png" alt="" width={44} height={44} />
       <div className="instalar__txt">
         <strong>Instalá {MARCA.nombre} en tu {modo === 'ios' ? 'celular' : 'equipo'}</strong>
         {modo === 'nativo'

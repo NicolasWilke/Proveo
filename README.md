@@ -1,6 +1,6 @@
 # Unísono (antes Proveo) · Conectando empresas. Generando negocios. (prototipo)
 
-**Marca:** nombre, lema, colores y logo están en `src/config/marca.ts`. Para cambiar el logo, reemplazá `src/assets/logo.png` (o poné `logo.svg` y cambiá la importación en ese archivo). El ícono de la pestaña es `public/favicon.png`.
+**Marca:** nombre, lema, colores y logo están en `src/config/marca.ts`. Para cambiar el logo, reemplazá `src/assets/logo.png` (o poné `logo.svg` y cambiá la importación en ese archivo). El ícono de la pestaña es `public/favicon-unisono.png` y los de la app instalada `public/icono-unisono-*.png` y `public/apple-touch-icon-unisono.png` (si los cambiás, cambiales también el nombre para que los navegadores no sigan mostrando el viejo).
 
 Prototipo navegable de la red comprador–proveedor descrita en `../Propuesta-Red-Comprador-Proveedor.pdf`.
 Las cuentas, el login y los perfiles pueden funcionar con Firebase de verdad (ver abajo). La red, los pedidos y las cotizaciones todavía son datos de ejemplo guardados en el navegador. Está armado para que este mismo código sea la base de producción.
