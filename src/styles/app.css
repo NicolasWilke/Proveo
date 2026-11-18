@@ -38,9 +38,9 @@ a:hover { color: var(--sello-hover); }
 .cabecera__in { display: flex; align-items: center; gap: 1.25rem; min-height: 64px; flex-wrap: wrap; padding-block: 0.5rem; }
 .marca { display: flex; align-items: center; gap: 0.6rem; text-decoration: none; color: var(--tinta); }
 .marca:hover { color: var(--tinta); }
-.marca__logo { width: 40px; height: 40px; object-fit: contain; flex: none; }
-.marca__txt { display: flex; flex-direction: column; gap: 3px; width: 109px; }
-.marca__nombre { display: block; width: 109px; height: auto; }
+.marca__logo { width: 50px; height: auto; object-fit: contain; flex: none; }
+.marca__txt { display: flex; flex-direction: column; gap: 3px; width: 115px; }
+.marca__nombre { display: block; width: 115px; height: auto; }
 .marca__lema { display: block; overflow: visible; fill: var(--tenue); font: 500 8.5px var(--f-texto); }
 .nav { display: flex; gap: 0.25rem; flex: 1; overflow-x: auto; scrollbar-width: none; }
 .nav__link { padding: 0.5rem 0.7rem; border-radius: var(--r-s); color: var(--tenue); text-decoration: none; font-weight: 500; font-size: var(--t-s); white-space: nowrap; }
@@ -86,7 +86,7 @@ a:hover { color: var(--sello-hover); }
   .cabecera__panel { display: none; }
   .cabecera__in { gap: 0.75rem; }
   .marca { gap: 0.4rem; }
-  .marca__logo { width: 32px; height: 32px; }
+  .marca__logo { width: 42px; }
 }
 
 .principal { min-height: 60vh; }

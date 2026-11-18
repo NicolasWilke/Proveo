@@ -7,6 +7,7 @@ import { validarValor } from '@/domain/resenas';
 import type { ValorReferencia } from '@/domain/types';
 import { Vacio } from '@/ui/primitivas';
 import { useToast } from '@/ui/Toast';
+import { MARCA } from '@/config/marca';
 
 type Borrador = { min: string; mediana: string; max: string; fecha: string };
 const aBorrador = (v: ValorReferencia): Borrador => ({ min: String(v.min), mediana: String(v.mediana), max: String(v.max), fecha: v.fecha ?? '' });
@@ -63,7 +64,7 @@ export function EditarValores() {
   if (!data.admin) {
     return (
       <div className="envoltura pagina">
-        <Vacio titulo="Solo para el equipo de Proveo" accion={{ a: '/valores', texto: 'Ver los valores' }}>
+        <Vacio titulo={`Solo para el equipo de ${MARCA.nombre}`} accion={{ a: '/valores', texto: 'Ver los valores' }}>
           Para editar valores, tu cuenta tiene que figurar en la colección admins de Firestore.
         </Vacio>
       </div>

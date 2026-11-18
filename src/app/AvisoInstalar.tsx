@@ -1,7 +1,7 @@
 import { MARCA } from '@/config/marca';
 import { cerrarAviso, instalar, useInstalacion } from './instalar';
 
-/** Tarjeta abajo de la pantalla que ofrece instalar Proveo como app. Se cierra y no vuelve por 30 días. */
+/** Tarjeta abajo de la pantalla que ofrece instalar la app como app. Se cierra y no vuelve por 30 días. */
 export function AvisoInstalar() {
   const { modo, cerrado } = useInstalacion();
   if (!modo || cerrado) return null;

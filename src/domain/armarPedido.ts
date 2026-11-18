@@ -64,7 +64,7 @@ export const ESQUEMA_BORRADOR = {
 /** Instrucciones fijas (no cambian entre pedidos, así la API las puede guardar en caché). */
 export function instrucciones(): string {
   const rubros = RUBROS.map((r) => `- ${r.id}: ${r.nombre} (unidad habitual: ${r.unidad})`).join('\n');
-  return `Sos el asistente de compras de Proveo, una red B2B de Argentina donde empresas piden cotizaciones a proveedores.
+  return `Sos el asistente de compras de Unísono, una red B2B de Argentina donde empresas piden cotizaciones a proveedores.
 Un comprador te cuenta con sus palabras qué necesita. Convertilo en un pedido de cotización claro, en español rioplatense, para que varios proveedores coticen cada ítem en el mismo formato.
 
 Reglas:

@@ -1,4 +1,4 @@
-# Proveo · Conectando empresas. Generando negocios. (prototipo)
+# Unísono (antes Proveo) · Conectando empresas. Generando negocios. (prototipo)
 
 **Marca:** nombre, lema, colores y logo están en `src/config/marca.ts`. Para cambiar el logo, reemplazá `src/assets/logo.png` (o poné `logo.svg` y cambiá la importación en ese archivo). El ícono de la pestaña es `public/favicon.png`.
 
@@ -35,7 +35,7 @@ Probar el envío:
 
 ```bash
 npm run mail:prueba                     # imprime los mails en la terminal
-MAIL_PROVIDER=resend RESEND_API_KEY=re_xxx MAIL_FROM="Proveo <avisos@tudominio.com.ar>" \
+MAIL_PROVIDER=resend RESEND_API_KEY=re_xxx MAIL_FROM="Unísono <avisos@tudominio.com.ar>" \
 MAIL_PRUEBA_A=vos@tudominio.com.ar npm run mail:prueba   # los manda de verdad, todos a tu casilla
 ```
 
@@ -45,7 +45,7 @@ Para mandar a terceros, Resend exige verificar el dominio remitente (registros S
 
 Sección propia (`/valores`) que muestra rangos mínimo, mediana y máximo por hora, por unidad o por trabajo, filtrables por rubro, región y tipo, con una calculadora para estimar un requerimiento. El formulario de pedido muestra el valor del rubro mientras el comprador carga la cantidad.
 
-**Los valores los carga el equipo de Proveo en `src/data/valores-referencia.ts`** (instrucciones al inicio del archivo). Un valor en 0 se muestra como "Valor a definir" y la calculadora lo ignora. Con `fecha` cargada, la sección ofrece llevarlo a pesos de hoy por inflación.
+**Los valores los carga el equipo de Unísono en `src/data/valores-referencia.ts`** (instrucciones al inicio del archivo). Un valor en 0 se muestra como "Valor a definir" y la calculadora lo ignora. Con `fecha` cargada, la sección ofrece llevarlo a pesos de hoy por inflación.
 
 ### Seguridad privada (valores cargados)
 
@@ -154,7 +154,7 @@ Las variables se leen al compilar: después de cambiarlas, **Deploys → Trigger
 
 **IA para armar pedidos (opcional):** el comprador escribe con sus palabras qué necesita ("limpieza para la oficina de Rosario, 400 m², lunes a viernes") y la IA llena el formulario del pedido: rubro, título, ítems con cantidad y unidad, entrega, documentos, y le marca qué datos le faltan para que los proveedores coticen bien. Nada se publica sin que el comprador lo revise. Para activarla: creá una clave en console.anthropic.com (API Keys), cargá saldo, poné un tope de gasto mensual (Settings → Limits) y cargala en Netlify como `ANTHROPIC_API_KEY` (solo en el sitio de producción). Sin esa variable la caja no aparece y no se gasta nada. Opcionales: `IA_MODELO` (por defecto `claude-opus-5-5`; `claude-haiku-5-5` es mucho más barato y rápido) e `IA_TOPE_DIARIO` (pedidos armados por usuario y por día, 20 por defecto). La clave vive solo en la función `netlify/functions/armar-pedido.mts`; el navegador nunca la ve, y la función solo atiende a usuarios con sesión iniciada.
 
-**Vista previa al compartir:** `index.html` trae descripción e imagen (`public/og-proveo.png`) para WhatsApp, LinkedIn y buscadores, más `public/robots.txt` y `public/sitemap.xml`. Usan `https://proveosrl.netlify.app`: cuando haya dominio propio, cambiá esa dirección en los tres archivos.
+**Vista previa al compartir:** `index.html` trae descripción e imagen (`public/og-unisono.png`) para WhatsApp, LinkedIn y buscadores, más `public/robots.txt` y `public/sitemap.xml`. Usan `https://proveosrl.netlify.app`: cuando haya dominio propio, cambiá esa dirección en los tres archivos.
 
 Para saber qué versión está publicada, mirá el pie de página: dice `Firebase · <id del proyecto>` o `modo demo`. Si dice `modo demo`, Netlify no está leyendo `VITE_AUTH=firebase`.
 

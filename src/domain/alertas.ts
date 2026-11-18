@@ -22,7 +22,7 @@ export const ofertasSinAvisar = (p: PedidoCotizacion & { ofertasAvisadas?: numbe
 const boton = (url: string, texto: string) => `<a href="${url}" style="display:inline-block;background:#1565C0;color:#ffffff;text-decoration:none;font-weight:bold;padding:11px 18px;border-radius:6px">${esc(texto)}</a>`;
 const titulo = (p: PedidoCotizacion) => `<p style="margin:0 0 4px;font-size:12px;color:#4F6280;font-family:monospace">${esc(p.id)}</p><h2 style="margin:0 0 12px;font-size:20px;line-height:1.2">${esc(p.titulo)}</h2>`;
 const parrafo = (t: string) => `<p style="margin:0 0 14px">${t}</p>`;
-const PIE = 'Recibís este mail por tu actividad en Proveo. Los precios de cada oferta solo los ve quien publicó el pedido.';
+const PIE = 'Recibís este mail por tu actividad en Unísono. Los precios de cada oferta solo los ve quien publicó el pedido.';
 const url = (base: string, p: PedidoCotizacion) => `${base}/cotizaciones/${encodeURIComponent(p.id)}`;
 
 function armar(asunto: string, partes: { html: string; texto: string }[]): MailCompuesto {
