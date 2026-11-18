@@ -685,6 +685,9 @@ textarea { resize: vertical; line-height: 1.5; }
 
 /* Nuevo pedido: repetir y opciones plegadas */
 .repetir { background: var(--superficie); border: 1px dashed var(--sello); border-radius: var(--r-m); padding: 0.9rem 1rem; }
+.con-ia { display: grid; gap: 0.6rem; background: var(--superficie); border: 1px dashed var(--sello); border-radius: var(--r-m); padding: 0.9rem 1rem; }
+.con-ia__acciones { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.9rem; }
+.con-ia__dudas { margin: 0; padding-left: 1.1rem; display: grid; gap: 0.2rem; }
 .mas-opciones { display: grid; gap: 1rem; }
 .mas-opciones > summary { cursor: pointer; padding: 0.9rem 1.15rem; background: var(--superficie); border: 1px solid var(--linea); border-radius: var(--r-m); list-style-position: inside; }
 .mas-opciones[open] > summary { margin-bottom: 1rem; }

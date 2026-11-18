@@ -41,6 +41,26 @@ MAIL_PRUEBA_A=vos@tudominio.com.ar npm run mail:prueba   # los manda de verdad, 
 
 Para mandar a terceros, Resend exige verificar el dominio remitente (registros SPF y DKIM en el DNS). La clave de Resend va solo en el servidor; nunca con prefijo `VITE_`.
 
+## Pedido armado con IA
+
+En **Nuevo pedido**, el comprador puede escribir lo que necesita con sus palabras (o pegar parte de un pliego) y tocar **Armar el pedido con IA**. Claude propone el rubro, el título, los ítems con cantidades y unidades, la entrega, la zona y los documentos, y llena el formulario. Lo que no pudo deducir o lo que supuso aparece en **Revisá antes de publicar**. La IA no publica nada ni pone precios: el comprador revisa, corrige y publica como siempre.
+
+Dónde está:
+
+- `src/domain/armarPedido.ts`: instrucciones para el modelo, forma de la respuesta y la limpieza de lo que devuelve (mismos límites que el formulario). Tiene tests.
+- `netlify/functions/armar-pedido.mts`: la función que llama a la API de Anthropic, en `/api/armar-pedido`. La clave vive solo ahí, nunca en el navegador.
+- `src/data/ia.ts` y `src/features/cotizaciones/NuevoPedido.tsx`: el botón y el armado del formulario.
+
+Para activarla, en Netlify (**Site configuration → Environment variables**):
+
+| Variable | Qué es |
+|---|---|
+| `ANTHROPIC_API_KEY` | Clave de [console.anthropic.com](https://console.anthropic.com). La API se paga por uso, aparte de la suscripción de Claude: cargá saldo y poné un límite de gasto mensual. |
+| `IA_MODELO` | Opcional. Por defecto `claude-haiku-5-5`. |
+| `IA_SIN_LOGIN` | Opcional. `true` deja usarla sin sesión (para la demo). Sin esto, la función exige una sesión de Firebase válida (usa `VITE_FIREBASE_API_KEY`). Ojo: con `true`, cualquiera que encuentre la URL gasta tu saldo. |
+
+Con `npm run dev` solo la función no corre (el botón avisa). Para probarla en tu compu: `npx netlify dev` con las variables en `.env.local`.
+
 ## Valores de referencia
 
 Sección propia (`/valores`) que muestra rangos mínimo, mediana y máximo por hora, por unidad o por trabajo, filtrables por rubro, región y tipo, con una calculadora para estimar un requerimiento. El formulario de pedido muestra el valor del rubro mientras el comprador carga la cantidad.

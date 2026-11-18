@@ -11,6 +11,8 @@ import type { Comprador, Enlace, ItemPedido, Moneda, RubroId } from '@/domain/ty
 import { fmt } from '@/i18n';
 import { Seccion, Vacio } from '@/ui/primitivas';
 import { useToast } from '@/ui/Toast';
+import { armarPedidoConIA } from '@/data/ia';
+import { TEXTO_MAX, TEXTO_MIN, type BorradorPedido } from '@/domain/armarPedido';
 import { RangoValor } from '../valores/RangoValor';
 import { EditorEnlaces } from './Enlaces';
 
@@ -49,6 +51,11 @@ export function NuevoPedido() {
   const [adjuntos, setAdjuntos] = useState<Enlace[]>([]);
   const [error, setError] = useState('');
   const [enviando, setEnviando] = useState(false);
+  // Pedido armado con IA: el texto del comprador, lo que la IA no pudo deducir y el estado del pedido.
+  const [textoIA, setTextoIA] = useState('');
+  const [armando, setArmando] = useState(false);
+  const [errorIA, setErrorIA] = useState('');
+  const [dudas, setDudas] = useState<string[]>([]);
 
   const { data } = useQuery(async (rp) => ({
     ...(await rp.valoresReferencia()),
@@ -86,6 +93,28 @@ export function NuevoPedido() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [aRepetir, data]);
   const [masOpciones, setMasOpciones] = useState(preinvitados.length > 0);
+  const aplicarBorrador = (b: BorradorPedido) => {
+    setR(b.rubro); setTitulo(b.titulo); setDescripcion(b.descripcion);
+    setItems(b.items.map((i, n) => ({ id: `i${n + 1}`, nombre: i.nombre, descripcion: i.descripcion, cantidad: i.cantidad ? String(i.cantidad) : '', unidad: i.unidad })));
+    setProximo(b.items.length + 1);
+    if (b.entrega) setEntrega(b.entrega);
+    if (b.zona) setZona(b.zona);
+    if (b.documentos.length) { setDocumentos((d) => [...d, ...b.documentos.filter((x) => !d.includes(x))].slice(0, 10)); setMasOpciones(true); }
+    setDudas(b.dudas);
+  };
+  const armarConIA = async () => {
+    setErrorIA(''); setDudas([]); setArmando(true);
+    try {
+      const b = await armarPedidoConIA(textoIA);
+      aplicarBorrador(b);
+      evento('pedido_ia', { rubro: b.rubro, items: b.items.length, dudas: b.dudas.length });
+      avisar('Listo: revisá el pedido y completá lo que falte antes de publicar.');
+    } catch (err) {
+      setErrorIA(err instanceof Error ? err.message : 'La IA no respondió. Probá de nuevo.');
+    } finally {
+      setArmando(false);
+    }
+  };
   const sumarFavoritos = () => setInvitados([...invitados, ...favoritos.filter((f) => !invitados.includes(f))].slice(0, INVITADOS_MAX));
 
   if (rol !== 'comprador') return <div className="envoltura pagina"><Vacio titulo="Solo los compradores publican pedidos" accion={{ a: '/cotizaciones', texto: 'Ver pedidos' }} /></div>;
@@ -144,6 +173,24 @@ export function NuevoPedido() {
             </select>
           </label>
         )}
+        <div className="con-ia">
+          <label className="campo" htmlFor="np-ia">
+            <span><strong>Describilo con tus palabras</strong> y la IA arma el pedido. Después revisás todo antes de publicar.</span>
+            <textarea id="np-ia" rows={3} maxLength={TEXTO_MAX} value={textoIA} onChange={(e) => setTextoIA(e.target.value)}
+              placeholder="Ej.: Necesito limpieza para una oficina de 400 m² en Rosario, 3 veces por semana desde diciembre. Que tengan seguro de responsabilidad civil." />
+          </label>
+          <div className="con-ia__acciones">
+            <button type="button" className="btn btn--sec" disabled={armando || textoIA.trim().length < TEXTO_MIN} onClick={armarConIA}>{armando ? 'Armando el pedido…' : 'Armar el pedido con IA'}</button>
+            <span className="tenue">También podés pegar la parte de un pliego que describe lo que comprás. Reemplaza lo que ya cargaste.</span>
+          </div>
+          {errorIA && <p className="error" role="alert">{errorIA}</p>}
+          {dudas.length > 0 && (
+            <div className="referencia" role="status">
+              <p className="referencia__tit"><span className="etq">Revisá antes de publicar</span></p>
+              <ul className="con-ia__dudas">{dudas.map((d) => <li key={d}>{d}</li>)}</ul>
+            </div>
+          )}
+        </div>
         <Seccion titulo="1. El pedido">
           <div className="form__fila">
             <label className="campo" htmlFor="np-rubro">
