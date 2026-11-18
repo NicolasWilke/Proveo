@@ -3,8 +3,8 @@
 // - /assets/*: llevan hash en el nombre, así que se guardan y se sirven desde caché.
 // - Firebase, Google y cualquier otro dominio: no se tocan (los datos siempre van en vivo).
 // v2: cambio de nombre e íconos a Unísono; subir el número obliga a renovar los íconos guardados.
-const CACHE = 'proveo-v2';
-const BASICOS = ['/', '/manifest.webmanifest', '/icono-192.png', '/icono-512.png', '/favicon.png'];
+const CACHE = 'proveo-v3';
+const BASICOS = ['/', '/manifest.webmanifest', '/icono-unisono-192.png', '/icono-unisono-512.png', '/favicon-unisono.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(BASICOS)).then(() => self.skipWaiting()));
