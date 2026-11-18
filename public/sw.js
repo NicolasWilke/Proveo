@@ -1,8 +1,9 @@
-// Service worker de Proveo: hace la app instalable y le da un arranque rápido.
+// Service worker de Unísono: hace la app instalable y le da un arranque rápido.
 // - Páginas: primero la red; sin conexión, la última versión guardada de la app.
 // - /assets/*: llevan hash en el nombre, así que se guardan y se sirven desde caché.
 // - Firebase, Google y cualquier otro dominio: no se tocan (los datos siempre van en vivo).
-const CACHE = 'proveo-v1';
+// v2: cambio de nombre e íconos a Unísono; subir el número obliga a renovar los íconos guardados.
+const CACHE = 'proveo-v2';
 const BASICOS = ['/', '/manifest.webmanifest', '/icono-192.png', '/icono-512.png', '/favicon.png'];
 
 self.addEventListener('install', (e) => {

@@ -8,6 +8,7 @@ import { fmt } from '@/i18n';
 import { Pill, Seccion, Vacio } from '@/ui/primitivas';
 import { useToast } from '@/ui/Toast';
 import { mesCorto } from '../referencias/LineaSerie';
+import { MARCA } from '@/config/marca';
 
 /** Carga del equipo: un dato nuevo por indicador y las escalas vigentes de cada convenio. */
 export function EditarIndices() {
@@ -15,7 +16,7 @@ export function EditarIndices() {
   const { data, cargando } = useQuery(async (r) => ({ admin: await r.esAdmin(usuarioId), ...(await r.indicadores()) }), [usuarioId]);
   if (cargando || !data) return <div className="envoltura pagina" />;
   if (!data.admin) {
-    return <div className="envoltura pagina"><Vacio titulo="Solo para el equipo de Proveo" accion={{ a: '/referencias', texto: 'Ver el centro de referencias' }}>Para cargar índices, tu cuenta tiene que figurar en la colección admins de Firestore.</Vacio></div>;
+    return <div className="envoltura pagina"><Vacio titulo={`Solo para el equipo de ${MARCA.nombre}`} accion={{ a: '/referencias', texto: 'Ver el centro de referencias' }}>Para cargar índices, tu cuenta tiene que figurar en la colección admins de Firestore.</Vacio></div>;
   }
   return (
     <div className="envoltura pagina">
