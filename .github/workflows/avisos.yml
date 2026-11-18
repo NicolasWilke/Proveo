@@ -7,7 +7,7 @@
 #   FIREBASE_SERVICE_ACCOUNT  contenido completo del JSON de la cuenta de servicio
 #   FIREBASE_PROJECT_ID       id del proyecto (por ejemplo, proveo-a3de6)
 #   RESEND_API_KEY            clave de Resend
-#   MAIL_FROM                 remitente verificado en Resend, por ejemplo: Pliego <avisos@tudominio.com.ar>
+#   MAIL_FROM                 remitente verificado en Resend, por ejemplo: Unísono <avisos@tudominio.com.ar>
 #   PUBLIC_URL                dirección pública del sitio, por ejemplo: https://approsrl.netlify.app
 name: Avisos por mail
 

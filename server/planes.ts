@@ -1,4 +1,4 @@
-// Avisa al equipo de Pliego cada vez que un proveedor pide un plan pago desde /planes.
+// Avisa al equipo de Unísono cada vez que un proveedor pide un plan pago desde /planes.
 // Sin esto, el pedido quedaba guardado en solicitudesPlan y solo se veía entrando a /admin.
 // Destinatarios: las cuentas de la colección admins (las mismas que entran a /admin).
 import { PLANES } from '@/domain/planes';
@@ -34,7 +34,7 @@ export async function avisarPedidosDePlan(mail: MailSender, urlBase: string) {
     let ok = true;
     for (const email of equipo) {
       try {
-        await mail.enviar({ para: { nombre: 'Equipo Pliego', email }, ...contenido });
+        await mail.enviar({ para: { nombre: 'Equipo Unísono', email }, ...contenido });
       } catch (e) {
         if (e instanceof MailMalConfigurado) throw e;
         ok = false; fallas.total++;

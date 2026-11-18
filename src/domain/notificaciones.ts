@@ -38,7 +38,7 @@ export function quienCompra(c: Comprador) {
 
 export const marco = (cuerpo: string, pie: string) => `
 <div style="font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:0 auto;color:#0B2D5B;background:#ffffff;border:1px solid #D3DCE8;border-radius:10px;overflow:hidden">
-  <div style="padding:14px 20px;border-bottom:3px solid #1E88E5;background:#0B2D5B;color:#ffffff"><span style="font-weight:800;font-size:20px;letter-spacing:0.02em">Pliego</span><span style="display:block;font-size:12px;color:#B9CBE3;margin-top:2px">Conectando empresas. Generando negocios.</span></div>
+  <div style="padding:14px 20px;border-bottom:3px solid #1E88E5;background:#0B2D5B;color:#ffffff"><span style="font-weight:800;font-size:20px;letter-spacing:0.02em">Unísono</span><span style="display:block;font-size:12px;color:#B9CBE3;margin-top:2px">Conectando empresas. Generando negocios.</span></div>
   <div style="padding:20px">${cuerpo}</div>
   <div style="padding:14px 20px;background:#E8EEF5;color:#4F6280;font-size:12px;line-height:1.5">${pie}</div>
 </div>`;
@@ -87,7 +87,7 @@ export function mailResumenDiario(items: { pedido: PedidoCotizacion; comprador: 
   return { asunto, html: marco(cuerpo, pieComun(prov, urlBase)), texto };
 }
 
-/** Datos de un pedido de plan pago para el mail al equipo de Pliego. */
+/** Datos de un pedido de plan pago para el mail al equipo de Unísono. */
 export interface PedidoDePlan { empresa: string; contacto: string; email: string; cuit: string; plan: string; precioUsd: number }
 
 /** Mail interno: un proveedor pidió un plan pago y hay que coordinar el cobro y activarlo en /admin. */
@@ -100,7 +100,7 @@ export function mailPedidoDePlan(p: PedidoDePlan, urlBase: string): MailCompuest
     ${filas.map(([k, v]) => `<tr><td style="padding:6px 0;color:#4F6280;width:120px">${k}</td><td style="padding:6px 0">${esc(v)}</td></tr>`).join('')}
   </table>
   <a href="${urlBase}/admin/cuentas" style="display:inline-block;background:#1565C0;color:#ffffff;text-decoration:none;font-weight:bold;padding:11px 18px;border-radius:6px">Activar el plan en Cuentas y planes</a>`,
-  'Aviso interno para el equipo de Pliego. Llega a las cuentas que figuran en la colección admins de Firestore.');
+  'Aviso interno para el equipo de Unísono. Llega a las cuentas que figuran en la colección admins de Firestore.');
   const texto = [
     'Un proveedor quiere pagar. Escribile hoy para coordinar la transferencia.', '',
     ...filas.map(([k, v]) => `${k}: ${v}`), '', `Activar el plan: ${urlBase}/admin/cuentas`,

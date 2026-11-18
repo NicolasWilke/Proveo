@@ -16,7 +16,7 @@ export function FichaComprador({ c, nombreVisible = !c.semiAnonimo, accion, conS
   const nombre = nombreVisible ? `${c.nombre} ${c.apellido}` : 'Nombre visible al aceptar';
   const abierta = ventanaAbierta(c);
   const v = c.verificaciones;
-  // Solo se muestra lo que el equipo de Pliego revisó de verdad (ver verificarCuenta en /admin).
+  // Solo se muestra lo que el equipo de Unísono revisó de verdad (ver verificarCuenta en /admin).
   const revisado = v.idFiscal && v.mailCorporativo && v.cargoRevisado;
   return (
     <article className="ficha">
