@@ -8,3 +8,7 @@ dist-artifact
 .firebase
 clave-servicio*.json
 *-service-account*.json
+
+# Salida de tsc: si queda en src/, Vite la usa en lugar de los .ts/.tsx
+src/**/*.js
+*.tsbuildinfo
