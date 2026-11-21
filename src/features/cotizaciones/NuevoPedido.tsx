@@ -13,6 +13,8 @@ import { Seccion, Vacio } from '@/ui/primitivas';
 import { useToast } from '@/ui/Toast';
 import { RangoValor } from '../valores/RangoValor';
 import { EditorEnlaces } from './Enlaces';
+import { ArmarConIA } from './ArmarConIA';
+import type { BorradorPedido } from '@/domain/armarPedido';
 
 interface FilaItem { id: string; nombre: string; descripcion: string; cantidad: string; unidad: string }
 const filaNueva = (n: number, unidad: string): FilaItem => ({ id: `i${n}`, nombre: '', descripcion: '', cantidad: '', unidad });
@@ -86,6 +88,20 @@ export function NuevoPedido() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [aRepetir, data]);
   const [masOpciones, setMasOpciones] = useState(preinvitados.length > 0);
+  // Borrador armado por la IA: llena el formulario y deja anotado lo que falta preguntar.
+  const [faltantes, setFaltantes] = useState<string[]>([]);
+  const aplicarBorrador = (b: BorradorPedido) => {
+    setR(b.rubro); setTitulo(b.titulo); setDescripcion(b.descripcion);
+    const filas = b.items.length ? b.items : [{ nombre: '', descripcion: '', cantidad: 0, unidad: rubro(b.rubro).unidad }];
+    setItems(filas.map((i, n) => ({ id: `i${n + 1}`, nombre: i.nombre, descripcion: i.descripcion, cantidad: i.cantidad > 0 ? String(i.cantidad) : '', unidad: i.unidad })));
+    setProximo(filas.length + 1);
+    if (b.entrega) setEntrega(b.entrega);
+    if (b.zona) setZona(b.zona);
+    if (b.documentos.length) { setDocumentos(b.documentos); setMasOpciones(true); }
+    setFaltantes(b.faltantes);
+    setRepetido('');
+    avisar('Listo: revisá el pedido, completá lo que falta y publicalo.');
+  };
   const sumarFavoritos = () => setInvitados([...invitados, ...favoritos.filter((f) => !invitados.includes(f))].slice(0, INVITADOS_MAX));
 
   if (rol !== 'comprador') return <div className="envoltura pagina"><Vacio titulo="Solo los compradores publican pedidos" accion={{ a: '/cotizaciones', texto: 'Ver pedidos' }} /></div>;
@@ -135,6 +151,14 @@ export function NuevoPedido() {
         <p className="tenue">Los proveedores cotizan cada ítem en el mismo formato, así podés compararlos lado a lado.</p>
       </header>
       <form className="form pedido-form" onSubmit={publicar}>
+        <ArmarConIA onBorrador={aplicarBorrador} />
+        {faltantes.length > 0 && (
+          <div className="referencia" role="status">
+            <p className="referencia__tit"><span className="etq">Para cotizar mejor</span> Los proveedores te van a preguntar esto. Si lo sabés, sumalo a la descripción o a los ítems:</p>
+            <ul className="armar-ia__faltantes">{faltantes.map((f) => <li key={f}>{f}</li>)}</ul>
+            <button type="button" className="enlace" onClick={() => setFaltantes([])}>Ocultar</button>
+          </div>
+        )}
         {data && data.anteriores.length > 0 && (
           <label className="campo repetir" htmlFor="np-repetir">
             <span>¿Ya pediste algo parecido? Repetí un pedido anterior y cambiá solo lo necesario</span>

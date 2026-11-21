@@ -8,6 +8,7 @@ import type { FuenteValor, RegionId, RubroId, TipoValor } from '@/domain/types';
 import { ajustar, estimarTotal, factorInflacion, tieneValor, valoresPara } from '@/domain/valores';
 import { fmt } from '@/i18n';
 import { Pill, Vacio, type TonoPill } from '@/ui/primitivas';
+import { AdaptarConIA, CompararCotizacion } from './AsistenteValores';
 import { RangoValor } from './RangoValor';
 
 const TIPOS: [TipoValor | '', string][] = [['', 'Todos'], ['hora', 'Por hora'], ['unidad', 'Por unidad'], ['proyecto', 'Por trabajo']];
@@ -123,6 +124,11 @@ export function ValoresReferencia() {
         {calc && total && (
           <aside className="calculadora">
             <h2>Estimá tu requerimiento</h2>
+            <AdaptarConIA valores={data.valores} onAdaptar={(id, n) => {
+              // Sin filtros, para que el valor elegido esté en la lista.
+              setRub(''); setReg(''); setTipo(''); setCalcId(id);
+              if (n > 0) setCantidad(String(n));
+            }} />
             <label className="campo" htmlFor="calc-concepto">
               <span>Concepto</span>
               <select id="calc-concepto" value={calc.v.id} onChange={(e) => setCalcId(e.target.value)}>
@@ -139,6 +145,7 @@ export function ValoresReferencia() {
               <span className="tenue">Mediana {fmt.moneda(total.mediana)} · sin IVA</span>
             </div>
             <Link to="/cotizaciones" className="btn btn--pri">Publicar un pedido con esta referencia</Link>
+            <CompararCotizacion key={calc.v.id} v={calc.v} ajustado={calc.factor !== 1} />
             <p className="nota">Los proveedores ven el mismo rango. Una cotización por encima no está mal si incluye más servicio; preguntá qué incluye antes de descartarla.</p>
           </aside>
         )}
