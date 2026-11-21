@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { llamarIA, useIAActiva } from '@/app/ia';
 import { evento } from '@/app/medicion';
 import { TEXTO_MAX, TEXTO_MIN, type BorradorPedido } from '@/domain/armarPedido';
 
@@ -8,30 +9,12 @@ import { TEXTO_MAX, TEXTO_MIN, type BorradorPedido } from '@/domain/armarPedido'
  * dice que tiene la clave de la IA cargada; en la demo y sin clave no se ve.
  */
 const URL_IA = '/api/armar-pedido';
-const CON_FIREBASE = import.meta.env.VITE_AUTH === 'firebase';
-
-async function tokenDeSesion(): Promise<string> {
-  const { firebase } = await import('@/firebase/app');
-  const u = firebase().auth.currentUser;
-  if (!u) throw new Error('Iniciá sesión para usar la IA.');
-  return u.getIdToken();
-}
 
 export function ArmarConIA({ onBorrador }: { onBorrador: (b: BorradorPedido) => void }) {
-  const [activa, setActiva] = useState(false);
+  const activa = useIAActiva(URL_IA);
   const [texto, setTexto] = useState('');
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
-
-  useEffect(() => {
-    if (!CON_FIREBASE) return;
-    let vivo = true;
-    fetch(URL_IA)
-      .then((r) => (r.ok ? r.json() : { activa: false }))
-      .then((d: { activa?: boolean }) => { if (vivo) setActiva(Boolean(d.activa)); })
-      .catch(() => undefined);
-    return () => { vivo = false; };
-  }, []);
 
   if (!activa) return null;
 
@@ -39,13 +22,8 @@ export function ArmarConIA({ onBorrador }: { onBorrador: (b: BorradorPedido) => 
     setError('');
     setCargando(true);
     try {
-      const r = await fetch(URL_IA, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await tokenDeSesion()}` },
-        body: JSON.stringify({ texto: texto.trim() }),
-      });
-      const d = (await r.json().catch(() => ({}))) as { borrador?: BorradorPedido; error?: string };
-      if (!r.ok || !d.borrador) throw new Error(d.error ?? 'La IA no respondió. Probá de nuevo.');
+      const d = await llamarIA<{ borrador?: BorradorPedido }>(URL_IA, { texto: texto.trim() });
+      if (!d.borrador) throw new Error('La IA no respondió. Probá de nuevo.');
       evento('pedido_armado_ia', { rubro: d.borrador.rubro, items: d.borrador.items.length });
       onBorrador(d.borrador);
     } catch (e) {
